@@ -68,5 +68,6 @@ export default {
     'text-blue-700',
     'text-purple-700',
     'text-orange-700',
+    'line-clamp-2',
   ],
 };

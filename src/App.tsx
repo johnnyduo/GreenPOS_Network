@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Activity, Eye, EyeOff, Leaf, Users, Store } from 'lucide-react';
 import { GlobalMapView } from './components/GlobalMapView';
-import { MoneyFlowRiver } from './components/MoneyFlowRiver';
-import { FlowParticles } from './components/FlowParticles';
 import { POSQuickAdd } from './components/POSQuickAdd';
 import { ShopDetailPanel } from './components/ShopDetailPanel';
 import { InvestorPortfolio } from './components/InvestorPortfolio';
@@ -11,6 +9,7 @@ import { StatsOverview } from './components/StatsOverview';
 import { InvestorDashboard } from './components/InvestorDashboard';
 import { ShopOwnerDashboard } from './components/ShopOwnerDashboard';
 import { FundingModal } from './components/FundingModal';
+import { RestockModal } from './components/RestockModal';
 import { mockShops, mockInvestors, generateMockTransactions } from './data/mockData';
 import { Shop, Transaction } from './types';
 
@@ -19,12 +18,14 @@ type UserRole = 'admin' | 'investor' | 'shop-owner';
 function App() {
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isPOSOpen, setIsPOSOpen] = useState(false);
-  const [showMoneyFlow, setShowMoneyFlow] = useState(true);
+  const [showMoneyFlow, setShowMoneyFlow] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [shops, setShops] = useState<Shop[]>(mockShops);
   const [userRole, setUserRole] = useState<UserRole>('admin');
   const [isFundingModalOpen, setIsFundingModalOpen] = useState(false);
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [shopToFund, setShopToFund] = useState<Shop | null>(null);
+  const [shopToRestock, setShopToRestock] = useState<Shop | null>(null);
 
   // Generate and update transactions periodically
   useEffect(() => {
@@ -72,6 +73,11 @@ function App() {
     setIsFundingModalOpen(true);
   };
 
+  const handleRestockShop = (shop: Shop) => {
+    setShopToRestock(shop);
+    setIsRestockModalOpen(true);
+  };
+
   const handleFundingComplete = (shopId: string, amount: number) => {
     setShops(prevShops =>
       prevShops.map(shop =>
@@ -82,6 +88,25 @@ function App() {
     );
     setIsFundingModalOpen(false);
     setShopToFund(null);
+  };
+
+  const handleRestockComplete = (shopId: string, items: any[]) => {
+    setShops(prevShops =>
+      prevShops.map(shop =>
+        shop.id === shopId
+          ? { 
+              ...shop, 
+              inventory: shop.inventory.map(inv => {
+                const restockItem = items.find(item => item.id === inv.id);
+                return restockItem ? { ...inv, quantity: inv.quantity + restockItem.quantity } : inv;
+              }),
+              stockHealth: Math.min(1, shop.stockHealth + 0.2)
+            }
+          : shop
+      )
+    );
+    setIsRestockModalOpen(false);
+    setShopToRestock(null);
   };
 
   const renderDashboard = () => {
@@ -101,6 +126,7 @@ function App() {
             transactions={transactions}
             onShopSelect={setSelectedShop}
             onOpenPOS={() => setIsPOSOpen(true)}
+            onRestockShop={handleRestockShop}
           />
         );
       default:
@@ -110,13 +136,13 @@ function App() {
             <StatsOverview shops={shops} transactions={transactions} />
 
             {/* Main Dashboard Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
               {/* Map Section */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-lg"
+                className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 shadow-lg"
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Global Network</h2>
@@ -133,7 +159,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="h-96 lg:h-[500px] rounded-xl overflow-hidden border border-gray-200">
+                <div className="h-96 lg:h-[600px] rounded-xl overflow-hidden border border-gray-200">
                   <GlobalMapView
                     shops={shops}
                     transactions={transactions}
@@ -149,7 +175,7 @@ function App() {
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="lg:col-span-1"
+                className="xl:col-span-1"
               >
                 <InvestorPortfolio
                   investors={mockInvestors}
@@ -176,7 +202,7 @@ function App() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-40 border-b border-gray-200 bg-white/80 backdrop-blur-md shadow-sm"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl">
@@ -249,7 +275,7 @@ function App() {
       </motion.header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative z-10 max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderDashboard()}
       </main>
 
@@ -271,14 +297,7 @@ function App() {
         </motion.button>
       )}
 
-      {/* Overlays */}
-      {userRole === 'admin' && (
-        <>
-          <MoneyFlowRiver transactions={transactions} isVisible={showMoneyFlow} />
-          <FlowParticles shops={shops} transactions={transactions} isVisible={showMoneyFlow} />
-        </>
-      )}
-      
+      {/* Modals */}
       <POSQuickAdd
         isOpen={isPOSOpen}
         onClose={() => setIsPOSOpen(false)}
@@ -290,6 +309,7 @@ function App() {
         shop={selectedShop}
         onClose={() => setSelectedShop(null)}
         onFundShop={handleFundShop}
+        onRestockShop={handleRestockShop}
       />
 
       <FundingModal
@@ -297,6 +317,13 @@ function App() {
         onClose={() => setIsFundingModalOpen(false)}
         shop={shopToFund}
         onFundingComplete={handleFundingComplete}
+      />
+
+      <RestockModal
+        isOpen={isRestockModalOpen}
+        onClose={() => setIsRestockModalOpen(false)}
+        shop={shopToRestock}
+        onRestockComplete={handleRestockComplete}
       />
     </div>
   );

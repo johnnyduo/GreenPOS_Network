@@ -24,6 +24,8 @@ export interface InventoryItem {
   price: number;
   lowStockThreshold: number;
   category: string;
+  image?: string;
+  description?: string;
 }
 
 export interface Transaction {

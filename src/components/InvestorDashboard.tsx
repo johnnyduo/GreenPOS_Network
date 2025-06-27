@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, DollarSign, Target, MapPin, Star, Filter } from 'lucide-react';
+import { TrendingUp, DollarSign, Target, MapPin, Star, Filter, Wallet } from 'lucide-react';
 import { Shop, Transaction } from '../types';
 
 interface InvestorDashboardProps {
@@ -16,6 +16,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'revenue' | 'roi' | 'funding'>('revenue');
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
 
   const categories = ['all', ...new Set(shops.map(shop => shop.category))];
 
@@ -45,6 +46,12 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
     return (shop.totalFunded / shop.fundingNeeded) * 100;
   };
 
+  const connectWallet = () => {
+    // Simulate wallet connection
+    setIsWalletConnected(true);
+    // In real implementation, this would connect to Maschain
+  };
+
   return (
     <div className="space-y-6">
       {/* Investment Overview */}
@@ -53,7 +60,21 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
       >
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Investment Dashboard</h2>
+        <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-800">Investment Dashboard</h2>
+          
+          <button
+            onClick={connectWallet}
+            className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              isWalletConnected
+                ? 'bg-green-100 text-green-700 border border-green-200'
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }`}
+          >
+            <Wallet className="w-5 h-5" />
+            {isWalletConnected ? 'Maschain Connected' : 'Connect Maschain Wallet'}
+          </button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4">
@@ -160,7 +181,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
       >
         <h3 className="text-xl font-bold text-gray-800 mb-6">Investment Opportunities</h3>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {sortedShops.map((shop, index) => {
             const roi = calculateROI(shop);
             const fundingProgress = getFundingProgress(shop);
@@ -226,10 +247,10 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                     </div>
                     <button
                       onClick={() => onFundShop(shop)}
-                      disabled={fundingNeeded <= 0}
+                      disabled={fundingNeeded <= 0 || !isWalletConnected}
                       className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                     >
-                      {fundingNeeded <= 0 ? 'Fully Funded' : 'Invest Now'}
+                      {!isWalletConnected ? 'Connect Wallet' : fundingNeeded <= 0 ? 'Fully Funded' : 'Invest Now'}
                     </button>
                   </div>
                 </div>

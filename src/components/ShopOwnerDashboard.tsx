@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, TrendingUp, Package, Users, ShoppingCart, AlertTriangle, Plus } from 'lucide-react';
+import { Store, TrendingUp, Package, Users, ShoppingCart, AlertTriangle, Plus, RefreshCw } from 'lucide-react';
 import { Shop, Transaction } from '../types';
 
 interface ShopOwnerDashboardProps {
@@ -8,13 +8,15 @@ interface ShopOwnerDashboardProps {
   transactions: Transaction[];
   onShopSelect: (shop: Shop) => void;
   onOpenPOS: () => void;
+  onRestockShop: (shop: Shop) => void;
 }
 
 export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
   shops,
   transactions,
   onShopSelect,
-  onOpenPOS
+  onOpenPOS,
+  onRestockShop
 }) => {
   const [selectedShopId, setSelectedShopId] = useState<string>(shops[0]?.id || '');
   
@@ -64,7 +66,7 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
             transition={{ delay: 0.1 }}
             className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
           >
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col xl:flex-row gap-6">
               <div className="flex-1">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
@@ -114,9 +116,9 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="lg:w-80">
+              <div className="xl:w-80">
                 <div className="bg-gray-50 rounded-xl p-4 h-48">
-                  <h4 className="font-semibold text-gray-800 mb-3">Live Shop Feed</h4>
+                  <h4 className="font-semibold text-gray-800 mb-3">Live Frontstore Camera</h4>
                   <div className="relative rounded-lg overflow-hidden h-32">
                     <img
                       src={selectedShop.liveStream}
@@ -126,6 +128,9 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                     <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                       LIVE
+                    </div>
+                    <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                      Active Monitoring
                     </div>
                   </div>
                 </div>
@@ -175,13 +180,16 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                 </div>
               </button>
 
-              <button className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-colors">
+              <button 
+                onClick={() => onRestockShop(selectedShop)}
+                className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-colors"
+              >
                 <div className="p-2 bg-orange-500 rounded-lg">
-                  <Users className="w-5 h-5 text-white" />
+                  <RefreshCw className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
-                  <p className="font-medium text-orange-800">Customer Data</p>
-                  <p className="text-sm text-orange-600">View insights</p>
+                  <p className="font-medium text-orange-800">Restock Items</p>
+                  <p className="text-sm text-orange-600">Request supplies</p>
                 </div>
               </button>
             </div>
@@ -202,9 +210,16 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                     key={item.id}
                     className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.category}</p>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <img
+                        src={item.image || 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200'}
+                        alt={item.name}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-800 truncate">{item.name}</p>
+                        <p className="text-sm text-gray-600">{item.category}</p>
+                      </div>
                     </div>
                     <div className="text-right ml-4">
                       <p className="font-bold text-gray-800">฿{item.price}</p>
@@ -238,7 +253,10 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                       </div>
                     ))}
                   </div>
-                  <button className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                  <button 
+                    onClick={() => onRestockShop(selectedShop)}
+                    className="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  >
                     Request Restock
                   </button>
                 </div>

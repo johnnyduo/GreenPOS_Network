@@ -1,18 +1,20 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, TrendingUp, Package, AlertTriangle, Users, DollarSign } from 'lucide-react';
+import { X, MapPin, TrendingUp, Package, AlertTriangle, Users, DollarSign, RefreshCw } from 'lucide-react';
 import { Shop } from '../types';
 
 interface ShopDetailPanelProps {
   shop: Shop | null;
   onClose: () => void;
   onFundShop: (shop: Shop) => void;
+  onRestockShop: (shop: Shop) => void;
 }
 
 export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
   shop,
   onClose,
-  onFundShop
+  onFundShop,
+  onRestockShop
 }) => {
   if (!shop) return null;
 
@@ -49,7 +51,7 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
 
           {/* Live Feed */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Live Feed</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">Live Frontstore Camera</h3>
             <div className="relative rounded-xl overflow-hidden">
               <img
                 src={shop.liveStream}
@@ -59,6 +61,9 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
               <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                 LIVE
+              </div>
+              <div className="absolute bottom-3 left-3 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                Active Monitoring
               </div>
             </div>
           </div>
@@ -158,8 +163,11 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
               Fund This Shop
             </button>
             
-            <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
-              <Package className="w-4 h-4" />
+            <button 
+              onClick={() => onRestockShop(shop)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
               Restock Assistance
             </button>
           </div>

@@ -36,7 +36,8 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
       center: [104.0, 12.0],
       zoom: 4,
       pitch: 30,
-      bearing: 0
+      bearing: 0,
+      attributionControl: false // Remove Mapbox watermark
     });
 
     map.current.on('load', () => {
@@ -102,7 +103,7 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
       
       // Determine shop status and color
       const isActive = new Date().getTime() - shop.lastSale.getTime() < 3600000;
-      const revenueLevel = shop.revenue > 2500 ? 'high' : shop.revenue > 1500 ? 'medium' : 'low';
+      const revenueLevel = shop.revenue > 3000 ? 'high' : shop.revenue > 2000 ? 'medium' : 'low';
       
       const colors = {
         high: { primary: '#10B981', secondary: '#059669' },
@@ -166,22 +167,7 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
       markersRef.current.push(marker);
     });
 
-    // Add smooth camera movement
-    const moveCamera = () => {
-      if (!map.current) return;
-      
-      const newBearing = map.current.getBearing() + 0.05;
-      
-      map.current.easeTo({
-        bearing: newBearing,
-        duration: 100
-      });
-    };
-
-    const interval = setInterval(moveCamera, 150);
-
     return () => {
-      clearInterval(interval);
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
     };
@@ -192,7 +178,7 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
       <div 
         ref={mapContainer} 
         className="w-full h-full rounded-xl overflow-hidden"
-        style={{ minHeight: '500px' }}
+        style={{ minHeight: '600px' }}
       />
       
       {/* Income Flow Lines Component */}
@@ -270,17 +256,17 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
           
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-emerald-500 rounded-full animate-glow"></div>
-            <span className="text-sm">High Revenue (฿2500+)</span>
+            <span className="text-sm">High Revenue (฿3000+)</span>
           </div>
           
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-            <span className="text-sm">Medium Revenue (฿1500+)</span>
+            <span className="text-sm">Medium Revenue (฿2000+)</span>
           </div>
           
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span className="text-sm">Low Revenue (&lt;฿1500)</span>
+            <span className="text-sm">Low Revenue (<฿2000)</span>
           </div>
           
           <div className="flex items-center gap-3">
