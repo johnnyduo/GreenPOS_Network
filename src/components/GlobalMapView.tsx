@@ -282,5 +282,6 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
         </div>
       </div>
     </div>
+  )
   );
 };
