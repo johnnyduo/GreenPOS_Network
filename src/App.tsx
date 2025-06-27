@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Activity, Eye, EyeOff, Leaf, Users, Store } from 'lucide-react';
+import { LandingPage } from './components/LandingPage';
 import { GlobalMapView } from './components/GlobalMapView';
 import { POSQuickAdd } from './components/POSQuickAdd';
 import { ShopDetailPanel } from './components/ShopDetailPanel';
@@ -17,6 +18,7 @@ import { Shop, Transaction, InventoryItem } from './types';
 type UserRole = 'admin' | 'investor' | 'shop-owner';
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isPOSOpen, setIsPOSOpen] = useState(false);
   const [showMoneyFlow, setShowMoneyFlow] = useState(false);
@@ -119,6 +121,14 @@ function App() {
       )
     );
   };
+
+  const handleEnterApp = () => {
+    setShowLanding(false);
+  };
+
+  if (showLanding) {
+    return <LandingPage onEnterApp={handleEnterApp} />;
+  }
 
   const renderDashboard = () => {
     switch (userRole) {
