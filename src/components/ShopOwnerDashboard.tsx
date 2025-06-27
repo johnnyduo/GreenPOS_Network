@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Store, TrendingUp, Package, Users, ShoppingCart, AlertTriangle, Plus, RefreshCw } from 'lucide-react';
-import { Shop, Transaction } from '../types';
+import { Store, TrendingUp, Package, Users, ShoppingCart, AlertTriangle, Plus, RefreshCw, BarChart3 } from 'lucide-react';
+import { Shop, Transaction, InventoryItem } from '../types';
+import { LiveCameraCarousel } from './LiveCameraCarousel';
+import { InventoryModal } from './InventoryModal';
+import { AnalyticsModal } from './AnalyticsModal';
 
 interface ShopOwnerDashboardProps {
   shops: Shop[];
@@ -9,6 +12,7 @@ interface ShopOwnerDashboardProps {
   onShopSelect: (shop: Shop) => void;
   onOpenPOS: () => void;
   onRestockShop: (shop: Shop) => void;
+  onInventoryUpdate: (shopId: string, updatedInventory: InventoryItem[]) => void;
 }
 
 export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
@@ -16,9 +20,12 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
   transactions,
   onShopSelect,
   onOpenPOS,
-  onRestockShop
+  onRestockShop,
+  onInventoryUpdate
 }) => {
   const [selectedShopId, setSelectedShopId] = useState<string>(shops[0]?.id || '');
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   
   const selectedShop = shops.find(shop => shop.id === selectedShopId) || shops[0];
   const shopTransactions = transactions.filter(t => t.shopId === selectedShopId);
@@ -117,23 +124,7 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
               </div>
 
               <div className="xl:w-80">
-                <div className="bg-gray-50 rounded-xl p-4 h-48">
-                  <h4 className="font-semibold text-gray-800 mb-3">Live Frontstore Camera</h4>
-                  <div className="relative rounded-lg overflow-hidden h-32">
-                    <img
-                      src={selectedShop.liveStream}
-                      alt="Shop live feed"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      LIVE
-                    </div>
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
-                      Active Monitoring
-                    </div>
-                  </div>
-                </div>
+                <LiveCameraCarousel shop={selectedShop} />
               </div>
             </div>
           </motion.div>
@@ -160,7 +151,10 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                 </div>
               </button>
 
-              <button className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors">
+              <button 
+                onClick={() => setIsInventoryModalOpen(true)}
+                className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors"
+              >
                 <div className="p-2 bg-blue-500 rounded-lg">
                   <Package className="w-5 h-5 text-white" />
                 </div>
@@ -170,9 +164,12 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                 </div>
               </button>
 
-              <button className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl transition-colors">
+              <button 
+                onClick={() => setIsAnalyticsModalOpen(true)}
+                className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl transition-colors"
+              >
                 <div className="p-2 bg-purple-500 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-white" />
+                  <BarChart3 className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <p className="font-medium text-purple-800">View Analytics</p>
@@ -293,6 +290,21 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
           </div>
         </>
       )}
+
+      {/* Modals */}
+      <InventoryModal
+        isOpen={isInventoryModalOpen}
+        onClose={() => setIsInventoryModalOpen(false)}
+        shop={selectedShop}
+        onUpdateInventory={onInventoryUpdate}
+      />
+
+      <AnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => setIsAnalyticsModalOpen(false)}
+        shop={selectedShop}
+        transactions={shopTransactions}
+      />
     </div>
   );
 };

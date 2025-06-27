@@ -18,10 +18,23 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
   mapLoaded
 }) => {
   const animationFrameRef = useRef<number>();
-  const particlesRef = useRef<any[]>([]);
 
   useEffect(() => {
     if (!mapInstance || !isVisible || !mapLoaded) return;
+
+    // Determine line colors based on recent activity
+    const getLineColor = (shop: Shop) => {
+      const recentSales = transactions.filter(t => 
+        t.shopId === shop.id && 
+        t.type === 'sale' && 
+        new Date().getTime() - t.timestamp.getTime() < 300000 // Last 5 minutes
+      );
+      
+      if (recentSales.length > 3) return '#10B981'; // High activity - bright green
+      if (recentSales.length > 1) return '#34D399'; // Medium activity - medium green
+      if (recentSales.length > 0) return '#6EE7B7'; // Low activity - light green
+      return '#9CA3AF'; // No recent activity - gray
+    };
 
     // Add income flow lines source and layer
     if (!mapInstance.getSource('income-flow-lines')) {
@@ -30,7 +43,8 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
         properties: {
           shopId: shop.id,
           shopName: shop.name,
-          revenue: shop.revenue
+          revenue: shop.revenue,
+          lineColor: getLineColor(shop)
         },
         geometry: {
           type: 'LineString' as const,
@@ -60,35 +74,28 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
           'line-cap': 'round'
         },
         paint: {
-          'line-color': [
-            'interpolate',
-            ['linear'],
-            ['get', 'revenue'],
-            1000, '#00C853',
-            2000, '#00E676',
-            3000, '#FFD700'
-          ],
+          'line-color': ['get', 'lineColor'],
           'line-width': [
             'interpolate',
             ['linear'],
             ['get', 'revenue'],
             1000, 2,
-            2000, 3,
-            3000, 4
+            3000, 4,
+            5000, 6
           ],
-          'line-opacity': 0.6,
+          'line-opacity': 0.8,
           'line-gradient': [
             'interpolate',
             ['linear'],
             ['line-progress'],
-            0, 'rgba(0, 200, 83, 0.1)',
-            0.5, 'rgba(0, 230, 118, 0.8)',
-            1, 'rgba(255, 215, 0, 1)'
+            0, 'rgba(156, 163, 175, 0.3)',
+            0.5, ['get', 'lineColor'],
+            1, '#FFD700'
           ]
         }
       });
 
-      // Add pulsing effect layer
+      // Add pulsing effect layer for active lines
       mapInstance.addLayer({
         id: 'income-flow-pulse',
         type: 'line',
@@ -98,10 +105,35 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#00E676',
-          'line-width': 6,
-          'line-opacity': 0.3
+          'line-color': ['get', 'lineColor'],
+          'line-width': 8,
+          'line-opacity': 0.4
+        },
+        filter: ['!=', ['get', 'lineColor'], '#9CA3AF'] // Only show pulse for active lines
+      });
+    } else {
+      // Update existing source with new line colors
+      const lineFeatures = shops.map(shop => ({
+        type: 'Feature' as const,
+        properties: {
+          shopId: shop.id,
+          shopName: shop.name,
+          revenue: shop.revenue,
+          lineColor: getLineColor(shop)
+        },
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: [
+            [shop.location.lng, shop.location.lat],
+            [GREENPOS_HQ.lng, GREENPOS_HQ.lat]
+          ]
         }
+      }));
+
+      const source = mapInstance.getSource('income-flow-lines') as mapboxgl.GeoJSONSource;
+      source.setData({
+        type: 'FeatureCollection',
+        features: lineFeatures
       });
     }
 
@@ -132,10 +164,10 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
         source: 'greenpos-hq',
         paint: {
           'circle-radius': 30,
-          'circle-color': '#00E676',
-          'circle-opacity': 0.1,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#00E676',
+          'circle-color': '#10B981',
+          'circle-opacity': 0.2,
+          'circle-stroke-width': 3,
+          'circle-stroke-color': '#10B981',
           'circle-stroke-opacity': 0.8
         }
       });
@@ -146,22 +178,22 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
         type: 'circle',
         source: 'greenpos-hq',
         paint: {
-          'circle-radius': 12,
+          'circle-radius': 15,
           'circle-color': '#FFD700',
-          'circle-stroke-width': 3,
-          'circle-stroke-color': '#00E676',
+          'circle-stroke-width': 4,
+          'circle-stroke-color': '#10B981',
           'circle-stroke-opacity': 1
         }
       });
     }
 
     // Animate the lines with pulsing effect
-    let pulseOpacity = 0.3;
+    let pulseOpacity = 0.2;
     let pulseDirection = 1;
 
     const animatePulse = () => {
       pulseOpacity += pulseDirection * 0.02;
-      if (pulseOpacity >= 0.8) pulseDirection = -1;
+      if (pulseOpacity >= 0.6) pulseDirection = -1;
       if (pulseOpacity <= 0.1) pulseDirection = 1;
 
       if (mapInstance.getLayer('income-flow-pulse')) {
@@ -182,7 +214,7 @@ export const IncomeFlowLines: React.FC<IncomeFlowLinesProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [mapInstance, shops, isVisible, mapLoaded]);
+  }, [mapInstance, shops, transactions, isVisible, mapLoaded]);
 
   // Clean up when component unmounts or becomes invisible
   useEffect(() => {

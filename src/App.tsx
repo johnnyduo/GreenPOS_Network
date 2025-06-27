@@ -10,8 +10,9 @@ import { InvestorDashboard } from './components/InvestorDashboard';
 import { ShopOwnerDashboard } from './components/ShopOwnerDashboard';
 import { FundingModal } from './components/FundingModal';
 import { RestockModal } from './components/RestockModal';
+import { IncomeFlowMarquee } from './components/IncomeFlowMarquee';
 import { mockShops, mockInvestors, generateMockTransactions } from './data/mockData';
-import { Shop, Transaction } from './types';
+import { Shop, Transaction, InventoryItem } from './types';
 
 type UserRole = 'admin' | 'investor' | 'shop-owner';
 
@@ -109,6 +110,16 @@ function App() {
     setShopToRestock(null);
   };
 
+  const handleInventoryUpdate = (shopId: string, updatedInventory: InventoryItem[]) => {
+    setShops(prevShops =>
+      prevShops.map(shop =>
+        shop.id === shopId
+          ? { ...shop, inventory: updatedInventory }
+          : shop
+      )
+    );
+  };
+
   const renderDashboard = () => {
     switch (userRole) {
       case 'investor':
@@ -127,6 +138,7 @@ function App() {
             onShopSelect={setSelectedShop}
             onOpenPOS={() => setIsPOSOpen(true)}
             onRestockShop={handleRestockShop}
+            onInventoryUpdate={handleInventoryUpdate}
           />
         );
       default:
@@ -273,6 +285,15 @@ function App() {
           </div>
         </div>
       </motion.header>
+
+      {/* Income Flow Marquee */}
+      {userRole === 'admin' && showMoneyFlow && (
+        <IncomeFlowMarquee
+          shops={shops}
+          transactions={transactions}
+          isVisible={showMoneyFlow}
+        />
+      )}
 
       {/* Main Content */}
       <main className="relative z-10 max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
