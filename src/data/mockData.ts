@@ -1,6 +1,7 @@
 import { Shop, Transaction, Investor } from '../types';
+import { config } from '../config';
 
-export const MAPBOX_TOKEN = 'pk.eyJ1IjoiZG9rYXB1bmciLCJhIjoiY20zNWJ6bzZwMDdldzJxcTZnYnZmYmRociJ9.2l4UBJst224_6s1kf7Rqdw';
+export const MAPBOX_TOKEN = config.mapbox.token;
 
 // GreenPOS Headquarters location in Bangkok
 export const GREENPOS_HQ = {

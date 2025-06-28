@@ -7,10 +7,30 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+jspm_packages/
+
+# Build outputs
 dist
 dist-ssr
+build/
 *.local
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
+# Cache directories
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -22,4 +42,47 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
+
+# OS generated files
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+
+# Package manager
+yarn-error.log
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage
+*.lcov
+.nyc_output
+
+# API keys and secrets
+config/secrets.ts
+private-keys/
+*.key
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Blockchain specific
+wallets/
