@@ -40,6 +40,7 @@ export class SmartContractServiceLite {
   private contractAddress: string;
   private gpsTokenAddress: string;
   private walletAddress: string | null = null;
+  private mockAllowance: number = 0; // Track mock allowance for demo
 
   constructor() {
     this.contractAddress = config.maschain.contractAddress;
@@ -67,33 +68,46 @@ export class SmartContractServiceLite {
   // =============================================================================
 
   async getGPSTokenInfo(): Promise<GPSTokenInfo> {
-    if (!this.walletAddress) {
-      throw new Error('Wallet not connected');
-    }
-
     try {
-      // Mock GPS token info - in production, call the actual contract
+      // For demo purposes, return mock GPS token info
+      // In production, this would call the actual GPS token contract
+      const mockBalance = 10000;
+      const currentAllowance = this.walletAddress ? this.mockAllowance : 0;
+      
+      console.log('📊 GPS Token Info (Demo Mode):');
+      console.log(`   • Address: ${this.gpsTokenAddress}`);
+      console.log(`   • Balance: ${mockBalance} GPS`);
+      console.log(`   • Allowance: ${currentAllowance} GPS`);
+      console.log(`   • Wallet Connected: ${!!this.walletAddress}`);
+      
       return {
         address: this.gpsTokenAddress,
         name: 'GreenPOS Token',
         symbol: 'GPS',
         decimals: 18,
-        balance: 10000, // Mock balance
-        allowance: 5000  // Mock allowance
+        balance: mockBalance,
+        allowance: currentAllowance
       };
     } catch (error) {
       console.error('Failed to get GPS token info:', error);
-      throw new Error('Failed to retrieve GPS token information');
+      // Return fallback data even on error
+      return {
+        address: this.gpsTokenAddress,
+        name: 'GreenPOS Token',
+        symbol: 'GPS',
+        decimals: 18,
+        balance: 0,
+        allowance: 0
+      };
     }
   }
 
   async approveGPSTokens(amount: number): Promise<string> {
-    if (!this.walletAddress) {
-      throw new Error('Wallet not connected');
-    }
-
     try {
-      console.log(`Approving ${amount} GPS tokens for contract use...`);
+      console.log(`🔄 Approving ${amount} GPS tokens for contract use...`);
+      console.log(`   • Token Address: ${this.gpsTokenAddress}`);
+      console.log(`   • Contract Address: ${this.contractAddress}`);
+      console.log(`   • Wallet: ${this.walletAddress || 'Demo Mode'}`);
       
       // Mock approval - in production, call GPS token contract
       const txHash = '0x' + Math.random().toString(16).substr(2, 64);
@@ -101,10 +115,14 @@ export class SmartContractServiceLite {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      console.log(`GPS tokens approved! Transaction: ${txHash}`);
+      // Update mock allowance for demo
+      this.mockAllowance = amount;
+      
+      console.log(`✅ GPS tokens approved! Transaction: ${txHash}`);
+      console.log(`   • New Allowance: ${amount} GPS`);
       return txHash;
     } catch (error) {
-      console.error('Failed to approve GPS tokens:', error);
+      console.error('❌ Failed to approve GPS tokens:', error);
       throw new Error('Failed to approve GPS tokens');
     }
   }
@@ -329,23 +347,70 @@ export class SmartContractServiceLite {
         params: {}
       };
 
+      console.log('Calling getNetworkStats with params:', params);
       const result = await maschainService.callContract(this.contractAddress, params);
+      console.log('Raw contract result:', result);
       
-      if (!result || !result.data) {
-        throw new Error('No network stats returned');
+      if (!result) {
+        console.warn('No result returned from contract call');
+        throw new Error('No result returned from contract');
       }
 
-      // Parse the returned tuple: (totalShops, activeShops, totalFunding, totalInvestors, avgSustainability)
-      const [totalShops, totalActiveShops, totalFunding, totalInvestors, averageSustainabilityScore] = result.data;
+      // Handle different possible result structures
+      let data = result.data || result;
+      
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        console.warn('Contract returned empty data, likely fresh deployment');
+        // Return default stats for a fresh contract
+        return {
+          totalShops: 0,
+          totalActiveShops: 0,
+          totalFunding: 0,
+          totalInvestors: 0,
+          averageSustainabilityScore: 0,
+          totalTransactions: 0
+        };
+      }
 
+      console.log('Processing contract data:', data);
+
+      // If result is an array of values (the expected format)
+      if (Array.isArray(data) && data.length >= 5) {
+        const [totalShops, totalActiveShops, totalFunding, totalInvestors, averageSustainabilityScore] = data;
+
+        return {
+          totalShops: parseInt(totalShops.toString()),
+          totalActiveShops: parseInt(totalActiveShops.toString()),
+          totalFunding: parseInt(totalFunding.toString()),
+          totalInvestors: parseInt(totalInvestors.toString()),
+          averageSustainabilityScore: parseInt(averageSustainabilityScore.toString()),
+          totalTransactions: 0 // Not tracked in lite version
+        };
+      }
+
+      // If result is an object with named properties
+      if (typeof data === 'object' && data !== null) {
+        return {
+          totalShops: parseInt((data.totalShops || data['0'] || 0).toString()),
+          totalActiveShops: parseInt((data.activeShops || data['1'] || 0).toString()),
+          totalFunding: parseInt((data.totalFunding || data['2'] || 0).toString()),
+          totalInvestors: parseInt((data.totalInvestors || data['3'] || 0).toString()),
+          averageSustainabilityScore: parseInt((data.avgSustainability || data['4'] || 0).toString()),
+          totalTransactions: 0
+        };
+      }
+
+      console.warn('Unexpected data format from contract:', data);
+      // Return default stats as fallback
       return {
-        totalShops: parseInt(totalShops),
-        totalActiveShops: parseInt(totalActiveShops),
-        totalFunding: parseInt(totalFunding),
-        totalInvestors: parseInt(totalInvestors),
-        averageSustainabilityScore: parseInt(averageSustainabilityScore),
-        totalTransactions: 0 // Not tracked in lite version
+        totalShops: 0,
+        totalActiveShops: 0,
+        totalFunding: 0,
+        totalInvestors: 0,
+        averageSustainabilityScore: 0,
+        totalTransactions: 0
       };
+
     } catch (error: any) {
       console.error('Failed to get network stats:', error);
       throw new Error(`Failed to retrieve network stats: ${error.message}`);

@@ -5,6 +5,7 @@ import { Shop, Transaction, getCategoryName, NetworkStats } from '../types';
 import MASChainWalletConnection from './MASChainWalletConnection';
 import SmartContractFundingModal from './SmartContractFundingModal';
 import { smartContractService, GPSTokenInfo } from '../services/smartContractLite';
+import ContractDemoHelper from '../utils/contractDemoHelper';
 
 // Simple debounce utility
 const debounce = (func: Function, delay: number) => {
@@ -64,125 +65,164 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
 
   // Debounced version to prevent rapid API calls
   const debouncedLoadNetworkStats = useCallback(
-    debounce(() => loadNetworkStats(), 1000),
-    []
+    debounce((retryCount = 0) => {
+      // Move the loadNetworkStats logic here to avoid dependency issues
+      const maxRetries = 2;
+      const retryDelay = 1000 * Math.pow(2, retryCount);
+      
+      const executeLoad = async () => {
+        try {
+          setLoadingStats(true);
+          
+          if (isWalletConnected && retryCount === 0) {
+            try {
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              if (retryCount === 0) {
+                ContractDemoHelper.logStatus();
+              }
+              
+              const stats = await smartContractService.getNetworkStats();
+              setNetworkStats(stats);
+              setServiceStatus('available');
+              return;
+            } catch (contractError) {
+              console.warn('Smart contract not available, using mock data:', contractError);
+              
+              const errorMessage = contractError instanceof Error ? contractError.message : String(contractError);
+              
+              if (errorMessage.includes('circuit breaker active')) {
+                setServiceStatus('unavailable');
+              } else if (errorMessage.includes('Failed to fetch') || 
+                         errorMessage.includes('ERR_INSUFFICIENT_RESOURCES')) {
+                setServiceStatus('degraded');
+              } else if (errorMessage.includes('No network stats returned') ||
+                         errorMessage.includes('No result returned from contract')) {
+                console.log('Fresh contract deployment detected, using mock data');
+                setServiceStatus('available');
+              }
+              
+              if (retryCount < maxRetries && (
+                errorMessage.includes('Failed to fetch') ||
+                errorMessage.includes('ERR_INSUFFICIENT_RESOURCES') ||
+                errorMessage.includes('Network')
+              )) {
+                console.log(`Retrying network stats in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+                setTimeout(() => {
+                  setLoadingStats(false);
+                  debouncedLoadNetworkStats(retryCount + 1);
+                }, retryDelay);
+                return;
+              }
+            }
+          }
+          
+          // Fallback to calculated stats from mock data
+          const totalFunding = shops.reduce((sum, shop) => sum + shop.totalFunded, 0);
+          const avgScore = shops.reduce((sum, shop) => sum + shop.sustainabilityScore, 0) / shops.length;
+          const activeShops = shops.filter(shop => shop.isActive).length;
+          
+          const mockStats = {
+            totalShops: shops.length,
+            totalActiveShops: activeShops,
+            totalFunding,
+            totalInvestors: 5,
+            averageSustainabilityScore: Math.round(avgScore),
+            totalTransactions: 150
+          };
+          
+          setNetworkStats(mockStats);
+          if (serviceStatus !== 'unavailable') {
+            setServiceStatus('degraded');
+          }
+          
+        } catch (error) {
+          console.error('Failed to load network stats:', error);
+          const totalFunding = shops.reduce((sum, shop) => sum + shop.totalFunded, 0);
+          const avgScore = shops.reduce((sum, shop) => sum + shop.sustainabilityScore, 0) / shops.length;
+          const activeShops = shops.filter(shop => shop.isActive).length;
+          
+          const mockStats = {
+            totalShops: shops.length,
+            totalActiveShops: activeShops,
+            totalFunding,
+            totalInvestors: 5,
+            averageSustainabilityScore: Math.round(avgScore),
+            totalTransactions: 150
+          };
+          setNetworkStats(mockStats);
+          setServiceStatus('degraded');
+        } finally {
+          setLoadingStats(false);
+        }
+      };
+      
+      executeLoad();
+    }, 1000),
+    [] // Empty deps to create stable debounced function
   );
 
-  const handleWalletConnectionChange = (connected: boolean, address?: string) => {
+  const loadGPSTokenInfo = useCallback(async () => {
+    try {
+      setLoadingTokenInfo(true);
+      console.log('🔄 Loading GPS token info...');
+      
+      const tokenInfo = await smartContractService.getGPSTokenInfo();
+      setGpsTokenInfo(tokenInfo);
+      
+      console.log('✅ GPS token info loaded:', tokenInfo);
+    } catch (error) {
+      console.error('❌ Failed to load GPS token info:', error);
+      // Set fallback token info for demo
+      setGpsTokenInfo({
+        address: smartContractService.getGPSTokenAddress(),
+        name: 'GreenPOS Token',
+        symbol: 'GPS',
+        decimals: 18,
+        balance: 0,
+        allowance: 0
+      });
+    } finally {
+      setLoadingTokenInfo(false);
+    }
+  }, []); // No dependencies needed for this demo function
+
+  const handleWalletConnectionChange = useCallback((connected: boolean, address?: string) => {
     setIsWalletConnected(connected);
     setConnectedAddress(address);
     
     // Set wallet address in smart contract service
     if (connected && address) {
       smartContractService.setWalletAddress(address);
-      debouncedLoadNetworkStats(); // Use debounced version
-      loadGPSTokenInfo();
     } else {
-      // Clear GPS token info when wallet disconnected
-      setGpsTokenInfo(null);
+      smartContractService.setWalletAddress(''); // Clear wallet address
     }
-  };
-
-  const loadGPSTokenInfo = async () => {
-    if (!isWalletConnected) return;
-
-    try {
-      setLoadingTokenInfo(true);
-      const tokenInfo = await smartContractService.getGPSTokenInfo();
-      setGpsTokenInfo(tokenInfo);
-    } catch (error) {
-      console.error('Failed to load GPS token info:', error);
-      // Set mock token info for demo
-      setGpsTokenInfo({
-        address: smartContractService.getGPSTokenAddress(),
-        name: 'GreenPOS Token',
-        symbol: 'GPS',
-        decimals: 18,
-        balance: 10000,
-        allowance: 5000
-      });
-    } finally {
-      setLoadingTokenInfo(false);
+    
+    // Load data after connection change
+    if (connected) {
+      debouncedLoadNetworkStats();
     }
-  };
+    loadGPSTokenInfo();
+  }, [debouncedLoadNetworkStats, loadGPSTokenInfo]);
 
   const handleApproveTokens = async (amount: number = 10000) => {
     try {
       setApprovingTokens(true);
-      const txHash = await smartContractService.approveGPSTokens(amount);
-      console.log('GPS tokens approved:', txHash);
+      console.log(`🔄 Requesting approval for ${amount} GPS tokens...`);
       
-      // Refresh token info
+      const txHash = await smartContractService.approveGPSTokens(amount);
+      console.log('✅ GPS tokens approved:', txHash);
+      
+      // Show success message
+      alert(`Success! Approved ${amount} GPS tokens.\nTransaction: ${txHash}`);
+      
+      // Refresh token info to show updated allowance
       await loadGPSTokenInfo();
     } catch (error: any) {
-      console.error('Failed to approve GPS tokens:', error);
+      console.error('❌ Failed to approve GPS tokens:', error);
       alert('Failed to approve GPS tokens: ' + error.message);
     } finally {
       setApprovingTokens(false);
-    }
-  };
-
-  const loadNetworkStats = async (retryCount = 0) => {
-    const maxRetries = 2;
-    const retryDelay = 1000 * Math.pow(2, retryCount); // Exponential backoff
-    
-    try {
-      setLoadingStats(true);
-      
-      if (isWalletConnected && retryCount === 0) {
-        // Only try smart contract on first attempt to avoid hammering the API
-        try {
-          // Add a small delay to prevent rapid API calls
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const stats = await smartContractService.getNetworkStats();
-          setNetworkStats(stats);
-          setServiceStatus('available');
-          return; // Success, exit early
-        } catch (contractError) {
-          console.warn('Smart contract not available, using mock data:', contractError);
-          
-          // If it's a network error and we haven't exceeded retries, try again
-          const errorMessage = contractError instanceof Error ? contractError.message : String(contractError);
-          
-          if (errorMessage.includes('circuit breaker active')) {
-            setServiceStatus('unavailable');
-          } else if (errorMessage.includes('Failed to fetch') || 
-                     errorMessage.includes('ERR_INSUFFICIENT_RESOURCES')) {
-            setServiceStatus('degraded');
-          }
-          
-          if (retryCount < maxRetries && (
-            errorMessage.includes('Failed to fetch') ||
-            errorMessage.includes('ERR_INSUFFICIENT_RESOURCES') ||
-            errorMessage.includes('Network')
-          )) {
-            console.log(`Retrying network stats in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
-            setTimeout(() => {
-              setLoadingStats(false); // Clear loading before retry
-              loadNetworkStats(retryCount + 1);
-            }, retryDelay);
-            return;
-          }
-        }
-      }
-      
-      // Fallback to calculated stats from mock data
-      const mockStats = calculateMockNetworkStats();
-      setNetworkStats(mockStats);
-      if (serviceStatus !== 'unavailable') {
-        setServiceStatus('degraded');
-      }
-      
-    } catch (error) {
-      console.error('Failed to load network stats:', error);
-      // Final fallback
-      const mockStats = calculateMockNetworkStats();
-      setNetworkStats(mockStats);
-      setServiceStatus('degraded');
-    } finally {
-      // Clear loading state
-      setLoadingStats(false);
     }
   };
 
@@ -211,7 +251,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
     setIsFundingModalOpen(false);
     setSelectedShop(null);
     // Refresh network stats
-    loadNetworkStats();
+    debouncedLoadNetworkStats();
     // In a real app, you'd refresh the shop data here
   };
 
@@ -222,8 +262,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
 
   // Load network stats on component mount and when wallet connects
   useEffect(() => {
-    loadNetworkStats();
-  }, [isWalletConnected, shops]); // Add shops as dependency to recalculate when data changes
+    debouncedLoadNetworkStats();
+    loadGPSTokenInfo(); // Also load GPS token info on mount
+  }, [debouncedLoadNetworkStats, loadGPSTokenInfo]); // Include dependencies
 
   return (
     <div className="space-y-6">
@@ -257,7 +298,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <button
                   onClick={() => {
                     setServiceStatus('available');
-                    loadNetworkStats();
+                    debouncedLoadNetworkStats();
                   }}
                   className="ml-2 px-2 py-1 bg-yellow-100 hover:bg-yellow-200 rounded text-xs font-medium transition-colors"
                 >

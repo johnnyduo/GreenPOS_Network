@@ -162,6 +162,9 @@ export class MASChainService {
 
     return this.throttleRequest(async () => {
       try {
+        console.log(`🔗 Calling contract ${address} method: ${params.method_name}`);
+        console.log('📝 Contract call params:', params);
+        
         const response = await fetch(`${this.config.apiUrl}/api/contract/smart-contracts/${address}/call`, {
           method: 'POST',
           headers: this.getHeaders(),
@@ -170,15 +173,18 @@ export class MASChainService {
 
         if (!response.ok) {
           this.recordFailure();
+          const errorText = await response.text();
+          console.error(`❌ Contract call failed: ${response.status} - ${errorText}`);
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const result = await response.json();
+        console.log('✅ Contract call result:', result);
         this.recordSuccess();
         return result.result;
       } catch (error) {
         this.recordFailure();
-        console.error('Error calling contract:', error);
+        console.error('❌ Error calling contract:', error);
         throw error;
       }
     });
