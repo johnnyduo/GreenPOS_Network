@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Activity, Eye, EyeOff, Leaf, Users, Store } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { GlobalMapView } from './components/GlobalMapView';
@@ -12,6 +12,7 @@ import { ShopOwnerDashboard } from './components/ShopOwnerDashboard';
 import { FundingModal } from './components/FundingModal';
 import { RestockModal } from './components/RestockModal';
 import { IncomeFlowMarquee } from './components/IncomeFlowMarquee';
+import { SmartContractDemo } from './components/SmartContractDemo';
 import { mockShops, mockInvestors, generateMockTransactions } from './data/mockData';
 import { Shop, Transaction, InventoryItem } from './types';
 
@@ -19,6 +20,7 @@ type UserRole = 'admin' | 'investor' | 'shop-owner';
 
 function App() {
   const [showLanding, setShowLanding] = useState(true);
+  const [showSmartContractDemo, setShowSmartContractDemo] = useState(false);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isPOSOpen, setIsPOSOpen] = useState(false);
   const [showMoneyFlow, setShowMoneyFlow] = useState(false);
@@ -128,6 +130,10 @@ function App() {
 
   if (showLanding) {
     return <LandingPage onEnterApp={handleEnterApp} />;
+  }
+
+  if (showSmartContractDemo) {
+    return <SmartContractDemo onBack={() => setShowSmartContractDemo(false)} />;
   }
 
   const renderDashboard = () => {

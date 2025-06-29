@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, DollarSign, Target, MapPin, Star, Filter, Wallet } from 'lucide-react';
-import { Shop, Transaction } from '../types';
+import { TrendingUp, DollarSign, Target, MapPin, Star, Filter, Loader, Coins, CheckCircle, AlertCircle } from 'lucide-react';
+import { Shop, Transaction, getCategoryName, NetworkStats } from '../types';
+import MASChainWalletConnection from './MASChainWalletConnection';
+import SmartContractFundingModal from './SmartContractFundingModal';
+import { smartContractService, GPSTokenInfo } from '../services/smartContractLite';
+
+// Simple debounce utility
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
 
 interface InvestorDashboardProps {
   shops: Shop[];
@@ -11,17 +23,26 @@ interface InvestorDashboardProps {
 
 export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   shops,
-  transactions,
-  onFundShop
+  transactions: _transactions, // Mark as used with underscore
+  onFundShop: _onFundShop // Mark as used with underscore - we'll use our own smart contract handler
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'revenue' | 'roi' | 'funding'>('revenue');
   const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | undefined>();
+  const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  const [isFundingModalOpen, setIsFundingModalOpen] = useState(false);
+  const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [gpsTokenInfo, setGpsTokenInfo] = useState<GPSTokenInfo | null>(null);
+  const [loadingTokenInfo, setLoadingTokenInfo] = useState(false);
+  const [approvingTokens, setApprovingTokens] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState<'available' | 'degraded' | 'unavailable'>('available');
 
-  const categories = ['all', ...new Set(shops.map(shop => shop.category))];
+  const categories = ['all', ...new Set(shops.map(shop => getCategoryName(shop.category)))];
 
   const filteredShops = shops.filter(shop => 
-    selectedCategory === 'all' || shop.category === selectedCategory
+    selectedCategory === 'all' || getCategoryName(shop.category) === selectedCategory
   );
 
   const sortedShops = [...filteredShops].sort((a, b) => {
@@ -37,23 +58,178 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
     }
   });
 
-  const calculateROI = (shop: Shop) => {
-    if (shop.totalFunded === 0) return 0;
-    return ((shop.revenue / shop.totalFunded) * 100);
-  };
-
   const getFundingProgress = (shop: Shop) => {
     return (shop.totalFunded / shop.fundingNeeded) * 100;
   };
 
-  const connectWallet = () => {
-    // Simulate wallet connection
-    setIsWalletConnected(true);
-    // In real implementation, this would connect to Maschain
+  // Debounced version to prevent rapid API calls
+  const debouncedLoadNetworkStats = useCallback(
+    debounce(() => loadNetworkStats(), 1000),
+    []
+  );
+
+  const handleWalletConnectionChange = (connected: boolean, address?: string) => {
+    setIsWalletConnected(connected);
+    setConnectedAddress(address);
+    
+    // Set wallet address in smart contract service
+    if (connected && address) {
+      smartContractService.setWalletAddress(address);
+      debouncedLoadNetworkStats(); // Use debounced version
+      loadGPSTokenInfo();
+    } else {
+      // Clear GPS token info when wallet disconnected
+      setGpsTokenInfo(null);
+    }
   };
+
+  const loadGPSTokenInfo = async () => {
+    if (!isWalletConnected) return;
+
+    try {
+      setLoadingTokenInfo(true);
+      const tokenInfo = await smartContractService.getGPSTokenInfo();
+      setGpsTokenInfo(tokenInfo);
+    } catch (error) {
+      console.error('Failed to load GPS token info:', error);
+      // Set mock token info for demo
+      setGpsTokenInfo({
+        address: smartContractService.getGPSTokenAddress(),
+        name: 'GreenPOS Token',
+        symbol: 'GPS',
+        decimals: 18,
+        balance: 10000,
+        allowance: 5000
+      });
+    } finally {
+      setLoadingTokenInfo(false);
+    }
+  };
+
+  const handleApproveTokens = async (amount: number = 10000) => {
+    try {
+      setApprovingTokens(true);
+      const txHash = await smartContractService.approveGPSTokens(amount);
+      console.log('GPS tokens approved:', txHash);
+      
+      // Refresh token info
+      await loadGPSTokenInfo();
+    } catch (error: any) {
+      console.error('Failed to approve GPS tokens:', error);
+      alert('Failed to approve GPS tokens: ' + error.message);
+    } finally {
+      setApprovingTokens(false);
+    }
+  };
+
+  const loadNetworkStats = async (retryCount = 0) => {
+    const maxRetries = 2;
+    const retryDelay = 1000 * Math.pow(2, retryCount); // Exponential backoff
+    
+    try {
+      setLoadingStats(true);
+      
+      if (isWalletConnected && retryCount === 0) {
+        // Only try smart contract on first attempt to avoid hammering the API
+        try {
+          // Add a small delay to prevent rapid API calls
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const stats = await smartContractService.getNetworkStats();
+          setNetworkStats(stats);
+          setServiceStatus('available');
+          return; // Success, exit early
+        } catch (contractError) {
+          console.warn('Smart contract not available, using mock data:', contractError);
+          
+          // If it's a network error and we haven't exceeded retries, try again
+          const errorMessage = contractError instanceof Error ? contractError.message : String(contractError);
+          
+          if (errorMessage.includes('circuit breaker active')) {
+            setServiceStatus('unavailable');
+          } else if (errorMessage.includes('Failed to fetch') || 
+                     errorMessage.includes('ERR_INSUFFICIENT_RESOURCES')) {
+            setServiceStatus('degraded');
+          }
+          
+          if (retryCount < maxRetries && (
+            errorMessage.includes('Failed to fetch') ||
+            errorMessage.includes('ERR_INSUFFICIENT_RESOURCES') ||
+            errorMessage.includes('Network')
+          )) {
+            console.log(`Retrying network stats in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            setTimeout(() => {
+              setLoadingStats(false); // Clear loading before retry
+              loadNetworkStats(retryCount + 1);
+            }, retryDelay);
+            return;
+          }
+        }
+      }
+      
+      // Fallback to calculated stats from mock data
+      const mockStats = calculateMockNetworkStats();
+      setNetworkStats(mockStats);
+      if (serviceStatus !== 'unavailable') {
+        setServiceStatus('degraded');
+      }
+      
+    } catch (error) {
+      console.error('Failed to load network stats:', error);
+      // Final fallback
+      const mockStats = calculateMockNetworkStats();
+      setNetworkStats(mockStats);
+      setServiceStatus('degraded');
+    } finally {
+      // Clear loading state
+      setLoadingStats(false);
+    }
+  };
+
+  const calculateMockNetworkStats = (): NetworkStats => {
+    const totalFunding = shops.reduce((sum, shop) => sum + shop.totalFunded, 0);
+    const avgScore = shops.reduce((sum, shop) => sum + shop.sustainabilityScore, 0) / shops.length;
+    const activeShops = shops.filter(shop => shop.isActive).length;
+    
+    return {
+      totalShops: shops.length,
+      totalActiveShops: activeShops,
+      totalFunding,
+      totalInvestors: 5, // Mock value
+      averageSustainabilityScore: Math.round(avgScore),
+      totalTransactions: 150 // Mock value
+    };
+  };
+
+  const handleFundShop = (shop: Shop) => {
+    setSelectedShop(shop);
+    setIsFundingModalOpen(true);
+  };
+
+  const handleFundingSuccess = (txHash: string) => {
+    console.log('Funding successful:', txHash);
+    setIsFundingModalOpen(false);
+    setSelectedShop(null);
+    // Refresh network stats
+    loadNetworkStats();
+    // In a real app, you'd refresh the shop data here
+  };
+
+  const handleFundingModalClose = () => {
+    setIsFundingModalOpen(false);
+    setSelectedShop(null);
+  };
+
+  // Load network stats on component mount and when wallet connects
+  useEffect(() => {
+    loadNetworkStats();
+  }, [isWalletConnected, shops]); // Add shops as dependency to recalculate when data changes
 
   return (
     <div className="space-y-6">
+      {/* Wallet Connection Section */}
+      <MASChainWalletConnection onConnectionChange={handleWalletConnectionChange} />
+
       {/* Investment Overview */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -63,17 +239,41 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Investment Dashboard</h2>
           
-          <button
-            onClick={connectWallet}
-            className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              isWalletConnected
-                ? 'bg-green-100 text-green-700 border border-green-200'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            <Wallet className="w-5 h-5" />
-            {isWalletConnected ? 'Maschain Connected' : 'Connect Maschain Wallet'}
-          </button>
+          {/* Service Status Indicator */}
+          {serviceStatus !== 'available' && (
+            <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
+              serviceStatus === 'degraded' 
+                ? 'bg-yellow-50 border border-yellow-200 text-yellow-700'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}>
+              <AlertCircle className="w-4 h-4" />
+              <span>
+                {serviceStatus === 'degraded' 
+                  ? 'Using demo data (network issues)'
+                  : 'Service temporarily unavailable'
+                }
+              </span>
+              {serviceStatus === 'degraded' && (
+                <button
+                  onClick={() => {
+                    setServiceStatus('available');
+                    loadNetworkStats();
+                  }}
+                  className="ml-2 px-2 py-1 bg-yellow-100 hover:bg-yellow-200 rounded text-xs font-medium transition-colors"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+          
+          {!isWalletConnected && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-700">
+                Please connect your MASchain wallet to start investing
+              </p>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -85,7 +285,13 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
               <div>
                 <p className="text-sm text-emerald-700">Total Invested</p>
                 <p className="text-2xl font-bold text-emerald-800">
-                  ฿{shops.reduce((sum, shop) => sum + shop.totalFunded, 0).toLocaleString()}
+                  {loadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : networkStats ? (
+                    `฿${networkStats.totalFunding.toLocaleString()}`
+                  ) : (
+                    `฿${shops.reduce((sum, shop) => sum + shop.totalFunded, 0).toLocaleString()}`
+                  )}
                 </p>
               </div>
             </div>
@@ -97,9 +303,15 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-blue-700">Avg ROI</p>
+                <p className="text-sm text-blue-700">Avg Sustainability</p>
                 <p className="text-2xl font-bold text-blue-800">
-                  {(shops.reduce((sum, shop) => sum + calculateROI(shop), 0) / shops.length).toFixed(1)}%
+                  {loadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : networkStats ? (
+                    `${networkStats.averageSustainabilityScore}%`
+                  ) : (
+                    `${(shops.reduce((sum, shop) => sum + (shop.sustainabilityScore || 50), 0) / shops.length).toFixed(1)}%`
+                  )}
                 </p>
               </div>
             </div>
@@ -111,8 +323,16 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <Target className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-purple-700">Active Investments</p>
-                <p className="text-2xl font-bold text-purple-800">{shops.length}</p>
+                <p className="text-sm text-purple-700">Active Shops</p>
+                <p className="text-2xl font-bold text-purple-800">
+                  {loadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : networkStats ? (
+                    networkStats.totalActiveShops
+                  ) : (
+                    shops.filter(shop => shop.isActive).length
+                  )}
+                </p>
               </div>
             </div>
           </div>
@@ -123,15 +343,137 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <Star className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-sm text-orange-700">Top Performer</p>
-                <p className="text-lg font-bold text-orange-800 truncate">
-                  {sortedShops[0]?.name || 'N/A'}
+                <p className="text-sm text-orange-700">Network Investors</p>
+                <p className="text-2xl font-bold text-orange-800">
+                  {loadingStats ? (
+                    <Loader className="w-6 h-6 animate-spin" />
+                  ) : networkStats ? (
+                    networkStats.totalInvestors
+                  ) : (
+                    '-'
+                  )}
                 </p>
               </div>
             </div>
           </div>
         </div>
       </motion.div>
+
+      {/* GPS Token Information */}
+      {isWalletConnected && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 shadow-lg border border-emerald-200"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500 rounded-lg">
+                <Coins className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-emerald-800">GPS Token Balance</h3>
+            </div>
+            
+            {gpsTokenInfo && gpsTokenInfo.allowance < 1000 && (
+              <button
+                onClick={() => handleApproveTokens(10000)}
+                disabled={approvingTokens}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {approvingTokens ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                {approvingTokens ? 'Approving...' : 'Approve GPS Tokens'}
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg p-4 border border-emerald-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Available Balance</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {loadingTokenInfo ? (
+                      <Loader className="w-6 h-6 animate-spin" />
+                    ) : gpsTokenInfo ? (
+                      `${gpsTokenInfo.balance.toLocaleString()} GPS`
+                    ) : (
+                      '- GPS'
+                    )}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Token Symbol</p>
+                  <p className="text-sm font-medium text-gray-700">{gpsTokenInfo?.symbol || 'GPS'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-emerald-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Approved for Trading</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {loadingTokenInfo ? (
+                      <Loader className="w-6 h-6 animate-spin" />
+                    ) : gpsTokenInfo ? (
+                      `${gpsTokenInfo.allowance.toLocaleString()} GPS`
+                    ) : (
+                      '- GPS'
+                    )}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {gpsTokenInfo && gpsTokenInfo.allowance > 0 ? (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-xs">Ready</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-orange-600">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-xs">Approve needed</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-emerald-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Token Contract</p>
+                  <p className="text-xs font-mono text-gray-600 break-all">
+                    {gpsTokenInfo?.address || smartContractService.getGPSTokenAddress()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Decimals</p>
+                  <p className="text-sm font-medium text-gray-700">{gpsTokenInfo?.decimals || 18}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {gpsTokenInfo && gpsTokenInfo.allowance < 1000 && (
+            <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-orange-800">Token Approval Required</p>
+                  <p className="text-xs text-orange-700 mt-1">
+                    You need to approve GPS tokens before you can fund shops. Click "Approve GPS Tokens" to authorize the smart contract to use your tokens.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Filters and Controls */}
       <motion.div
@@ -183,7 +525,6 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {sortedShops.map((shop, index) => {
-            const roi = calculateROI(shop);
             const fundingProgress = getFundingProgress(shop);
             const fundingNeeded = shop.fundingNeeded - shop.totalFunded;
             
@@ -202,12 +543,14 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                       <MapPin className="w-4 h-4 flex-shrink-0" />
                       <span className="truncate">{shop.country}</span>
                       <span className="text-gray-400">•</span>
-                      <span className="truncate">{shop.category}</span>
+                      <span className="truncate">{getCategoryName(shop.category)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 ml-2">
                     <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-medium text-gray-700">{roi.toFixed(1)}%</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {shop.sustainabilityScore || 50}/100
+                    </span>
                   </div>
                 </div>
 
@@ -246,7 +589,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                       <p className="font-bold text-emerald-600">฿{fundingNeeded.toLocaleString()}</p>
                     </div>
                     <button
-                      onClick={() => onFundShop(shop)}
+                      onClick={() => handleFundShop(shop)}
                       disabled={fundingNeeded <= 0 || !isWalletConnected}
                       className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                     >
@@ -259,6 +602,15 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
           })}
         </div>
       </motion.div>
+
+      {/* Smart Contract Funding Modal */}
+      <SmartContractFundingModal
+        shop={selectedShop}
+        isOpen={isFundingModalOpen}
+        onClose={handleFundingModalClose}
+        onSuccess={handleFundingSuccess}
+        walletAddress={connectedAddress}
+      />
     </div>
   );
 };
