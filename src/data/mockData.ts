@@ -282,6 +282,20 @@ export const mockInvestors: Investor[] = [
     totalInvested: 28000,
     activeInvestments: 15,
     roi: 15.8
+  },
+  {
+    id: 'inv_004',
+    name: 'Rural Development Bank',
+    totalInvested: 18000,
+    activeInvestments: 6,
+    roi: 12.4
+  },
+  {
+    id: 'inv_005',
+    name: 'EcoFinance Initiative',
+    totalInvested: 22000,
+    activeInvestments: 9,
+    roi: 16.7
   }
 ];
 
