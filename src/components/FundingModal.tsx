@@ -42,15 +42,6 @@ export const FundingModal: React.FC<FundingModalProps> = ({
     try {
       console.log('🚀 Executing real blockchain funding transaction...');
       
-      // Reset circuit breaker before funding
-      try {
-        const { maschainService } = await import('../services/maschain');
-        maschainService.resetCircuitBreaker();
-        console.log('🔄 Circuit breaker reset for funding transaction');
-      } catch (resetError) {
-        console.warn('⚠️ Could not reset circuit breaker:', resetError);
-      }
-      
       // Set wallet address if not already set
       if (!smartContractService.isWalletConnected()) {
         smartContractService.setWalletAddress(connectedWallet);

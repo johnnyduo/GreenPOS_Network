@@ -20,7 +20,7 @@ interface SmartContractFundingModalProps {
   shop: Shop | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (txHash: string) => void;
+  onSuccess: (txHash: string, fundedAmount: number) => void;
   walletAddress: string | undefined;
 }
 
@@ -196,12 +196,90 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
           walletAddress
         });
 
+        // Check if investor is already registered before attempting funding
+        console.log('🔍 Checking investor registration status before funding...');
+        try {
+          const isAlreadyRegistered = await smartContractService.isInvestorRegistered(walletAddress);
+          if (isAlreadyRegistered) {
+            console.log('✅ Investor already registered, proceeding with funding');
+          } else {
+            console.log('⚠️ Investor not registered, will auto-register if funding fails');
+          }
+        } catch (checkError) {
+          console.warn('⚠️ Could not check investor status, will handle during funding:', checkError);
+        }
+
       // Execute REAL blockchain transaction - no simulation
-      const result = await smartContractService.fundShop({
-        shopId,
-        amount: fundingAmount,
-        purpose
-      });
+      let result: string;
+      try {
+        result = await smartContractService.fundShop({
+          shopId,
+          amount: fundingAmount,
+          purpose
+        });
+      } catch (fundingError: any) {
+        // If error indicates investor not registered, auto-register first
+        if (fundingError.message.includes('Not registered') || 
+            fundingError.message.includes('register as an investor') ||
+            fundingError.message.includes('revert Not registered')) {
+          
+          console.log('🔄 Investor not registered, registering first...');
+          console.log('🔍 Original error:', fundingError.message);
+          console.log('🔍 Wallet address for registration:', walletAddress);
+          setError('Registering as investor first, then will proceed with funding...');
+          
+          try {
+            // Register investor with a unique name to avoid conflicts
+            const investorName = `GreenPOS Investor ${Date.now()}`;
+            console.log('🔄 Registering investor with name:', investorName);
+            
+            const registrationTx = await smartContractService.registerInvestor(investorName);
+            console.log('✅ Investor registration successful:', registrationTx);
+            
+            // Wait longer for the registration to be processed on blockchain
+            console.log('⏳ Waiting for registration to be processed...');
+            await new Promise(resolve => setTimeout(resolve, 5000)); // 5 seconds
+            
+            // Clear any error messages during the wait
+            setError('Registration complete, now processing funding...');
+            
+            // Verify registration was successful by trying to get investor info
+            try {
+              console.log('🔍 Verifying investor registration...');
+              const isRegistered = await smartContractService.isInvestorRegistered(walletAddress);
+              if (isRegistered) {
+                console.log('✅ Investor verification successful');
+              } else {
+                console.warn('⚠️ Investor still not registered after registration attempt');
+                throw new Error('Investor registration verification failed');
+              }
+            } catch (verifyError) {
+              console.warn('⚠️ Could not verify investor registration, proceeding anyway:', verifyError);
+            }
+            
+            // Now try funding again
+            console.log('🔄 Retrying funding after investor registration...');
+            result = await smartContractService.fundShop({
+              shopId,
+              amount: fundingAmount,
+              purpose
+            });
+            console.log('✅ Funding successful after registration:', result);
+          } catch (registrationError: any) {
+            console.error('❌ Investor registration failed:', registrationError);
+            
+            // Handle service unavailability for registration
+            if (registrationError.message.includes('Service temporarily unavailable')) {
+              throw new Error('MASchain service is temporarily busy. Please try again in a few moments.');
+            } else {
+              throw new Error(`Failed to register investor: ${registrationError.message}`);
+            }
+          }
+        } else {
+          // Re-throw the original error if it's not about registration
+          throw fundingError;
+        }
+      }
 
       console.log('✅ Funding transaction completed:', result);
       setTxHash(result);
@@ -214,10 +292,18 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
       console.error('❌ Funding transaction failed:', error);
       
       // Provide more specific error messages
-      if (error.message.includes('Insufficient GPS balance')) {
+      if (error.message.includes('Service temporarily unavailable')) {
+        setError('🔄 MASchain service is temporarily busy. Please try again in a few moments.');
+      } else if (error.message.includes('Insufficient GPS balance') || error.message.includes('Insufficient tokens')) {
         setError(`Insufficient GPS tokens. ${error.message}`);
       } else if (error.message.includes('Wallet not connected')) {
         setError('Wallet connection lost. Please reconnect your wallet and try again.');
+      } else if (error.message.includes('fully funded')) {
+        setError('This shop is already fully funded.');
+      } else if (error.message.includes('Shop does not exist')) {
+        setError('This shop is not available for funding.');
+      } else if (error.message.includes('Failed to register investor')) {
+        setError('Failed to register as investor. The blockchain service may be busy - please wait a moment and try again.');
       } else {
         setError(error.message || 'Failed to process funding transaction');
       }
@@ -715,9 +801,11 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
                     // Note: MASchain handles allowances automatically
                   });
                   
-                  onSuccess(txHash || '');
-                  // Don't call handleClose() here - just close the success modal
-                  // handleClose();
+                  // Call onSuccess to handle post-funding logic in parent component
+                  onSuccess(txHash || '', fundingAmount);
+                  
+                  // Close the entire funding modal
+                  handleClose();
                 }}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 px-4 rounded-xl font-medium transition-colors"
               >

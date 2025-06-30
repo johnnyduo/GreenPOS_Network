@@ -73,10 +73,6 @@ export class MASChainService {
   private requestQueue: Array<() => Promise<any>> = [];
   private isProcessingQueue: boolean = false;
   private readonly MIN_REQUEST_INTERVAL = 1000; // 1 second between requests
-  private failureCount: number = 0;
-  private lastFailureTime: number = 0;
-  private readonly MAX_FAILURES = 3;
-  private readonly CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
 
   constructor() {
     this.config = {
@@ -163,10 +159,6 @@ export class MASChainService {
    * Call a smart contract function (read-only)
    */
   async callContract(address: string, params: ContractCallParams): Promise<any> {
-    if (!this.shouldAllowRequest()) {
-      throw new Error('Service temporarily unavailable (circuit breaker active)');
-    }
-
     return this.throttleRequest(async () => {
       try {
         console.log(`🔗 Calling contract ${address} method: ${params.method_name}`);
@@ -179,7 +171,6 @@ export class MASChainService {
         });
 
         if (!response.ok) {
-          this.recordFailure();
           const errorText = await response.text();
           console.error(`❌ Contract call failed: ${response.status} - ${errorText}`);
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -187,10 +178,8 @@ export class MASChainService {
 
         const result = await response.json();
         console.log('✅ Contract call result:', result);
-        this.recordSuccess();
         return result.result;
       } catch (error) {
-        this.recordFailure();
         console.error('❌ Error calling contract:', error);
         throw error;
       }
@@ -201,17 +190,6 @@ export class MASChainService {
    * Execute a smart contract function (write) - Updated to match MASchain API docs
    */
   async executeContract(contractAddress: string, methodName: string, args: any[] = [], includeABI: boolean = true): Promise<any> {
-    // Auto-recovery: Reset circuit breaker if it's been active for more than 30 seconds
-    const now = Date.now();
-    if (!this.shouldAllowRequest() && (now - this.lastFailureTime) > 30000) {
-      console.log('🔄 Auto-recovering: Circuit breaker has been active for >30s, resetting...');
-      this.resetCircuitBreaker();
-    }
-
-    if (!this.shouldAllowRequest()) {
-      throw new Error('Service temporarily unavailable (circuit breaker active)');
-    }
-
     return this.throttleRequest(async () => {
       try {
         // Map parameters based on the specific method being called
@@ -229,9 +207,20 @@ export class MASChainService {
         // Include contract ABI if requested (may help with execution issues)
         if (includeABI) {
           try {
-            const { CONTRACT_ABI } = await import('./contractABI');
-            payload.contract_abi = CONTRACT_ABI;
-            console.log('📋 Including contract ABI in request');
+            // Use different ABI based on contract address
+            let abi;
+            if (contractAddress.toLowerCase() === config.maschain.gpsTokenAddress.toLowerCase()) {
+              // Use GPS Token ABI for GPS token contract calls
+              const { GPS_TOKEN_ABI } = await import('./contractABI');
+              abi = GPS_TOKEN_ABI;
+              console.log('📋 Including GPS Token ABI in request');
+            } else {
+              // Use main contract ABI for main contract calls
+              const { CONTRACT_ABI } = await import('./contractABI');
+              abi = CONTRACT_ABI;
+              console.log('📋 Including main contract ABI in request');
+            }
+            payload.contract_abi = abi;
           } catch (error) {
             console.warn('⚠️ Could not load contract ABI:', error);
             // Don't throw error, but log that ABI is missing
@@ -277,7 +266,6 @@ export class MASChainService {
               errorMessage += ` - ${responseBody}`;
             }
           }
-          this.recordFailure();
           throw new Error(errorMessage);
         }
 
@@ -299,19 +287,15 @@ export class MASChainService {
             }
             
           } catch (e) {
-            this.recordFailure();
             throw new Error(`Invalid JSON response: ${responseBody}`);
           }
         } else {
-          this.recordFailure();
           throw new Error('Empty response body');
         }
 
         console.log('📝 Smart Contract Write Response:', result);
-        this.recordSuccess();
         return result.result || result;
       } catch (error) {
-        this.recordFailure();
         console.error('Failed to execute contract (write):', error);
         throw error;
       }
@@ -333,57 +317,83 @@ export class MASChainService {
     }
 
     // Try multiple parameter mapping strategies
+    let mappedParams: { [key: string]: any };
+
     switch (methodName) {
       case 'registerShop':
-        // MASchain API expects parameters WITH underscores based on the 422 error
-        return {
+        // MASchain API expects parameters WITH underscores based on the ABI
+        mappedParams = {
           '_name': args[0],
           '_category': parseInt(args[1].toString()),
           '_location': args[2], 
           '_fundingNeeded': args[3].toString()
         };
+        break;
       
       case 'fundShop':
-        return {
+        mappedParams = {
           '_shopId': parseInt(args[0].toString()),
           '_amount': args[1].toString(),
           '_purpose': args[2]
         };
+        break;
+      
+      case 'approve':
+        // ERC20 approve method for GPS token contract
+        mappedParams = {
+          'spender': args[0],  // Contract address that will be approved to spend
+          'amount': args[1].toString()  // Amount to approve in wei
+        };
+        break;
+      
+      case 'allowance':
+        // ERC20 allowance method for GPS token contract - READ operation
+        mappedParams = {
+          'owner': args[0],    // Owner address
+          'spender': args[1]   // Spender address (contract)
+        };
+        break;
       
       case 'registerInvestor':
-        return {
-          'name': args[0]
+        mappedParams = {
+          '_name': args[0]
         };
+        break;
       
       case 'getShop':
-        return { 'shopId': parseInt(args[0].toString()) };
+        mappedParams = { 'shopId': parseInt(args[0].toString()) };
+        break;
       
       case 'recordSale':
-        return {
+        mappedParams = {
           'shopId': parseInt(args[0].toString()),
           'amount': args[1].toString()
         };
+        break;
       
       case 'updateSustainabilityScore':
-        return {
+        mappedParams = {
           'shopId': parseInt(args[0].toString()),
           'score': parseInt(args[1].toString())
         };
+        break;
       
       default:
         // Fallback to generic parameter mapping with proper types
-        const params: { [key: string]: any } = {};
+        mappedParams = {};
         args.forEach((arg, index) => {
           // Try to convert numbers properly
           if (typeof arg === 'number' || !isNaN(Number(arg))) {
-            params[`param${index}`] = parseInt(arg.toString());
+            mappedParams[`param${index}`] = parseInt(arg.toString());
           } else {
-            params[`param${index}`] = arg;
+            mappedParams[`param${index}`] = arg;
           }
         });
-        console.log('🔄 Generic params mapping:', params);
-        return params;
+        break;
     }
+
+    console.log('✅ Mapped parameters:', mappedParams);
+    return mappedParams;
   }
 
   /**
@@ -490,100 +500,18 @@ export class MASChainService {
       throw new Error('Contract address not set');
     }
 
-    // Try the alternative method first (it has better success rate)
-    try {
-      return await this.registerShopAlternative(name, category, location, fundingNeeded);
-    } catch (error) {
-      console.log('⚠️ Alternative method failed, trying original method...');
-      
-      // Fallback to original method
-      const result = await this.executeContract(
-        this.contractAddress, 
-        'registerShop',
-        [name, category, location, fundingNeeded.toString()],
-        true // Always include ABI since it's required for success
-      );
-      return result.transaction_hash;
-    }
-  }
+    console.log('🏪 Registering shop with MASchain API...', {
+      name, category, location, fundingNeeded
+    });
 
-  /**
-   * Alternative shop registration method - tries multiple parameter formats
-   */
-  async registerShopAlternative(name: string, category: number, location: string, fundingNeeded: number): Promise<string> {
-    if (!this.contractAddress) {
-      throw new Error('Contract address not set');
-    }
-
-    console.log('🔄 Trying alternative shop registration methods...');
-
-    // Method 1: Try with simple parameter names (no underscores)
-    try {
-      console.log('📝 Method 1: Simple parameter names (no underscores)');
-      const result = await this.executeContract(this.contractAddress, {
-        wallet_options: {
-          type: "organisation",
-          address: this.config.walletAddress
-        },
-        method_name: 'registerShop',
-        params: {
-          'name': name,
-          'category': category,
-          'location': location,
-          'fundingNeeded': fundingNeeded.toString()
-        }
-      });
-      console.log('✅ Method 1 succeeded:', result);
-      return result.transaction_hash;
-    } catch (error) {
-      console.log('❌ Method 1 failed:', error);
-    }
-
-    // Method 2: Try with exact ABI parameters (with underscores)
-    try {
-      console.log('📝 Method 2: Exact ABI parameters (with underscores)');
-      const result = await this.executeContract(this.contractAddress, {
-        wallet_options: {
-          type: "organisation",
-          address: this.config.walletAddress
-        },
-        method_name: 'registerShop',
-        params: {
-          '_name': name,
-          '_category': category,
-          '_location': location,
-          '_fundingNeeded': fundingNeeded.toString()
-        }
-      });
-      console.log('✅ Method 2 succeeded:', result);
-      return result.transaction_hash;
-    } catch (error) {
-      console.log('❌ Method 2 failed:', error);
-    }
-
-    // Method 3: Try with positional parameters
-    try {
-      console.log('📝 Method 3: Positional parameters');
-      const result = await this.executeContract(this.contractAddress, {
-        wallet_options: {
-          type: "organisation",
-          address: this.config.walletAddress
-        },
-        method_name: 'registerShop',
-        params: {
-          '0': name,
-          '1': category,
-          '2': location,
-          '3': fundingNeeded.toString()
-        }
-      });
-      console.log('✅ Method 3 succeeded:', result);
-      return result.transaction_hash;
-    } catch (error) {
-      console.log('❌ Method 3 failed:', error);
-    }
-
-    throw new Error('All registration methods failed');
+    // Use the standard executeContract method
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'registerShop',
+      [name, category, location, fundingNeeded.toString()],
+      true // Always include ABI since it's required for success
+    );
+    return result.transaction_hash;
   }
 
   /**
@@ -605,83 +533,24 @@ export class MASChainService {
 
   /**
    * Fund a shop
-   * Note: Amount is sent as msg.value in the transaction, not as a parameter
    */
-  async fundShop(shopId: number, _amount: number, purpose: string): Promise<string> {
+  async fundShop(shopId: number, amount: number, purpose: string): Promise<string> {
     if (!this.contractAddress) {
       throw new Error('Contract address not set');
     }
 
-    // Try the alternative method first (it has better success rate)
-    try {
-      return await this.fundShopAlternative(shopId, _amount, purpose);
-    } catch (error) {
-      console.log('⚠️ Alternative funding method failed, trying original method...');
-      
-      // Fallback to original method
-      const result = await this.executeContract(
-        this.contractAddress, 
-        'fundShop',
-        [shopId.toString(), _amount.toString(), purpose],
-        true // Always include ABI since it's required for success
-      );
-      return result.transaction_hash;
-    }
-  }
+    console.log('💰 Funding shop with MASchain API...', {
+      shopId, amount, purpose
+    });
 
-  /**
-   * Alternative fund shop method - tries multiple parameter formats
-   */
-  async fundShopAlternative(shopId: number, amount: number, purpose: string): Promise<string> {
-    if (!this.contractAddress) {
-      throw new Error('Contract address not set');
-    }
-
-    console.log('🔄 Trying alternative fund shop methods...');
-
-    // Method 1: Try with simple parameter names (no underscores)
-    try {
-      console.log('📝 Method 1: Simple parameter names (no underscores)');
-      const result = await this.executeContract(this.contractAddress, {
-        wallet_options: {
-          type: "organisation",
-          address: this.config.walletAddress
-        },
-        method_name: 'fundShop',
-        params: {
-          'shopId': shopId,
-          'amount': amount.toString(),
-          'purpose': purpose
-        }
-      });
-      console.log('✅ Method 1 succeeded:', result);
-      return result.transaction_hash;
-    } catch (error) {
-      console.log('❌ Method 1 failed:', error);
-    }
-
-    // Method 2: Try with exact ABI parameters (with underscores)
-    try {
-      console.log('📝 Method 2: Exact ABI parameters (with underscores)');
-      const result = await this.executeContract(this.contractAddress, {
-        wallet_options: {
-          type: "organisation",
-          address: this.config.walletAddress
-        },
-        method_name: 'fundShop',
-        params: {
-          '_shopId': shopId,
-          '_amount': amount.toString(),
-          '_purpose': purpose
-        }
-      });
-      console.log('✅ Method 2 succeeded:', result);
-      return result.transaction_hash;
-    } catch (error) {
-      console.log('❌ Method 2 failed:', error);
-    }
-
-    throw new Error('All funding methods failed');
+    // Use the standard executeContract method
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'fundShop',
+      [shopId.toString(), amount.toString(), purpose],
+      true // Always include ABI since it's required for success
+    );
+    return result.transaction_hash;
   }
 
   /**
@@ -884,44 +753,6 @@ export class MASChainService {
   }
 
   /**
-   * Circuit breaker pattern to prevent hammering a failing service
-   */
-  private shouldAllowRequest(): boolean {
-    const now = Date.now();
-    
-    // If we haven't had recent failures, allow the request
-    if (this.failureCount < this.MAX_FAILURES) {
-      return true;
-    }
-    
-    // If circuit breaker timeout has passed, allow a test request
-    if (now - this.lastFailureTime > this.CIRCUIT_BREAKER_TIMEOUT) {
-      this.failureCount = 0; // Reset failure count
-      return true;
-    }
-    
-    return false;
-  }
-
-  private recordFailure() {
-    this.failureCount++;
-    this.lastFailureTime = Date.now();
-  }
-
-  private recordSuccess() {
-    this.failureCount = 0;
-  }
-
-  /**
-   * Reset circuit breaker (emergency reset)
-   */
-  resetCircuitBreaker(): void {
-    this.failureCount = 0;
-    this.lastFailureTime = 0;
-    console.log('🔄 Circuit breaker reset - service available again');
-  }
-
-  /**
    * Throttle requests to prevent API overload
    */
   private async throttleRequest<T>(requestFn: () => Promise<T>): Promise<T> {
@@ -938,10 +769,8 @@ export class MASChainService {
           
           this.lastRequestTime = Date.now();
           const result = await requestFn();
-          this.recordSuccess();
           resolve(result);
         } catch (error) {
-          this.recordFailure();
           reject(error);
         }
       });
@@ -1066,10 +895,6 @@ export class MASChainService {
     success: boolean;
     message: string;
   }> {
-    if (!this.shouldAllowRequest()) {
-      throw new Error('Service temporarily unavailable (circuit breaker active)');
-    }
-
     return this.throttleRequest(async () => {
       try {
         console.log('🪙 Mint Token Request:', {
@@ -1117,7 +942,6 @@ export class MASChainService {
               errorMessage += ` - ${responseBody}`;
             }
           }
-          this.recordFailure();
           
           // Provide more specific error messages like the example
           if (errorMessage.includes('total supply reached')) {
@@ -1155,7 +979,6 @@ export class MASChainService {
               console.log('🔗 Transaction Hash:', formattedTxHash);
               console.log('🌐 Explorer Link:', explorerUrl);
               
-              this.recordSuccess();
               return {
                 transactionHash: formattedTxHash,
                 explorerUrl: explorerUrl,
@@ -1164,22 +987,18 @@ export class MASChainService {
               };
             } else {
               console.warn('⚠️ No transaction hash in mint response');
-              this.recordSuccess();
               return {
                 success: true,
                 message: `Mint transaction submitted (${params.amount} tokens to ${params.to})`
               };
             }
           } catch (e) {
-            this.recordFailure();
             throw new Error(`Invalid JSON response: ${responseBody}`);
           }
         } else {
-          this.recordFailure();
           throw new Error('Empty response body from mint request');
         }
       } catch (error) {
-        this.recordFailure();
         console.error('❌ Failed to mint tokens:', error);
         throw error;
       }

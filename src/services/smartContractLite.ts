@@ -145,28 +145,18 @@ export class SmartContractServiceLite {
           console.log('📊 Balance API result:', balanceResult);
           
           if (balanceResult && balanceResult.balance !== '0') {
-            // Smart conversion: Check if balance is already in human-readable format or wei
+            // SIMPLIFIED: Just parse the balance directly since MASchain API returns human-readable format
             const balanceString = balanceResult.balance;
             console.log('🔍 Raw balance string:', balanceString);
             
-            let realBalance: number;
-            
-            // If balance has decimal places, it's likely already in human-readable format
-            if (balanceString.includes('.')) {
-              // Already in human-readable format (e.g., "13000.000000000000000000")
-              realBalance = parseFloat(balanceString);
-              console.log('📊 Balance detected as human-readable format:', realBalance);
-            } else {
-              // Assume it's in wei format, convert to tokens
-              realBalance = parseFloat(balanceString) / Math.pow(10, 18);
-              console.log('📊 Balance detected as wei format, converted:', realBalance);
-            }
+            realBalance = parseFloat(balanceString);
+            console.log('📊 Parsed balance directly from API:', realBalance);
             
             balanceSource = 'blockchain';
             
             console.log('✅ Real blockchain GPS balance via token API:', realBalance);
             
-            // If we have a real balance, use it and update our mock balance to match
+            // Update our mock balance to match for consistency
             this.mockTokenBalance = realBalance;
           } else {
             console.log('📝 Token balance is 0 or API returned no balance');
@@ -179,27 +169,16 @@ export class SmartContractServiceLite {
         console.log('⚠️ No wallet address set - using demo balance');
       }
       
-      // Use real balance if available, otherwise fall back to mock balance
-      const finalBalance = balanceSource === 'blockchain' ? realBalance : this.mockTokenBalance;
+      // SIMPLIFIED: Use the balance we successfully fetched from the API
+      let finalBalance = realBalance; // Use the API balance directly
       
-      // FORCE FIX: If we detect the API returned the correct balance but conversion failed
-      let correctedBalance = finalBalance;
-      if (realBalance === 13000 && finalBalance !== 13000) {
-        correctedBalance = 13000;
-        console.log('🔧 FORCE CORRECTION: API returned 13000, forcing display balance to 13000');
-      } else if (balanceSource === 'blockchain' && realBalance > 0) {
-        correctedBalance = realBalance;
-        console.log('🔧 Using blockchain balance:', realBalance);
-      } else if (this.mockTokenBalance === 13000) {
-        correctedBalance = 13000;
-        console.log('🔧 Using mock balance (known correct):', 13000);
-      }
+      console.log('🔧 SIMPLIFIED LOGIC: Using API balance directly:', finalBalance);
       
       const currentAllowance = this.walletAddress ? this.mockAllowance : 0;
       
       console.log('📊 GPS Token Info Final Result:');
       console.log(`   • Address: ${this.gpsTokenAddress}`);
-      console.log(`   • Balance: ${correctedBalance} GPS (${balanceSource})`);
+      console.log(`   • Balance: ${finalBalance} GPS (${balanceSource})`);
       console.log(`   • Allowance: ${currentAllowance} GPS`);
       console.log(`   • Wallet Connected: ${!!this.walletAddress}`);
       console.log(`   • Transaction History: ${this.transactionHistory.length} entries`);
@@ -209,7 +188,7 @@ export class SmartContractServiceLite {
         name: 'GreenPOS Token',
         symbol: 'GPS',
         decimals: 18,
-        balance: correctedBalance, // Use corrected balance
+        balance: finalBalance, // Use the API balance directly
         allowance: currentAllowance
       };
     } catch (error) {
@@ -226,28 +205,102 @@ export class SmartContractServiceLite {
     }
   }
 
+  async checkGPSTokenAllowance(ownerAddress: string, spenderAddress: string): Promise<number> {
+    try {
+      console.log('🔍 Checking GPS token allowance...', {
+        owner: ownerAddress,
+        spender: spenderAddress,
+        tokenContract: this.gpsTokenAddress
+      });
+
+      const result = await maschainService.executeContract(
+        this.gpsTokenAddress,  // GPS token contract address
+        'allowance',
+        [ownerAddress, spenderAddress],
+        true // Include ABI for contract reads
+      );
+
+      console.log('🔍 Raw allowance result:', result);
+
+      // Parse the allowance from the result
+      let allowanceInWei = '0';
+      if (result.result && result.result.length > 0) {
+        allowanceInWei = result.result[0];
+      } else if (result.output && result.output.length > 0) {
+        allowanceInWei = result.output[0];
+      } else if (typeof result === 'string') {
+        allowanceInWei = result;
+      }
+
+      // Convert from wei to GPS tokens (18 decimals)
+      const allowanceInGPS = parseFloat(allowanceInWei) / Math.pow(10, 18);
+      
+      console.log('✅ Current allowance:', {
+        allowanceInWei,
+        allowanceInGPS
+      });
+
+      return allowanceInGPS;
+    } catch (error: any) {
+      console.error('❌ Failed to check allowance:', error);
+      return 0; // Return 0 if we can't check allowance
+    }
+  }
+
   async approveGPSTokens(amount: number): Promise<string> {
+    if (!this.walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
     try {
       console.log(`🔄 Approving ${amount} GPS tokens for contract use...`);
       console.log(`   • Token Address: ${this.gpsTokenAddress}`);
       console.log(`   • Contract Address: ${this.contractAddress}`);
-      console.log(`   • Wallet: ${this.walletAddress || 'Demo Mode'}`);
+      console.log(`   • Wallet: ${this.walletAddress}`);
       
-      // Mock approval - in production, call GPS token contract
-      const txHash = '0x' + Math.random().toString(16).substr(2, 64);
+      // Convert amount to wei (GPS token has 18 decimals)
+      const amountInWei = (amount * Math.pow(10, 18)).toString();
       
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('🚀 Executing REAL GPS token approval on blockchain...');
+      console.log('📋 Approval parameters:', {
+        tokenContract: this.gpsTokenAddress,
+        spender: this.contractAddress,
+        amount: amount,
+        amountInWei
+      });
       
-      // Update mock allowance for demo
-      this.mockAllowance = amount;
+      // Call the GPS token contract to approve the main contract
+      const result = await maschainService.executeContract(
+        this.gpsTokenAddress,  // GPS token contract address
+        'approve',
+        [
+          this.contractAddress,  // spender (the main contract)
+          amountInWei           // amount to approve
+        ],
+        true // Include ABI for contract writes
+      );
+      
+      let txHash = result.transaction_hash || result.txHash || result.hash;
+      
+      if (!txHash) {
+        throw new Error('No transaction hash returned from approval');
+      }
+
+      // Ensure transaction hash is properly formatted
+      if (!txHash.startsWith('0x')) {
+        txHash = '0x' + txHash;
+      }
       
       console.log(`✅ GPS tokens approved! Transaction: ${txHash}`);
-      console.log(`   • New Allowance: ${amount} GPS`);
+      console.log(`   • Approved Amount: ${amount} GPS`);
+      
+      // Update mock allowance for consistency
+      this.mockAllowance = amount;
+      
       return txHash;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to approve GPS tokens:', error);
-      throw new Error('Failed to approve GPS tokens');
+      throw new Error(`Failed to approve GPS tokens: ${error.message || error}`);
     }
   }
 
@@ -258,11 +311,29 @@ export class SmartContractServiceLite {
     }
 
     try {
-      // Mock balance - in production, call the contract
-      return 10000; // 10,000 GPS tokens
+      console.log('🔍 Getting GPS balance from blockchain for:', targetAddress);
+      
+      // Get real blockchain balance using token balance API
+      const balanceResult = await maschainService.getTokenBalance(this.gpsTokenAddress, targetAddress);
+      
+      if (balanceResult && balanceResult.balance) {
+        const balanceString = balanceResult.balance;
+        console.log('🔍 Raw balance from API:', balanceString);
+        
+        // SIMPLIFIED: Just parse the number directly since API returns human-readable format
+        const realBalance = parseFloat(balanceString);
+        
+        console.log('✅ SIMPLIFIED GPS balance from API:', realBalance);
+        return realBalance;
+      }
+      
+      // If no balance returned, user has 0 tokens
+      console.log('📝 No GPS balance found, returning 0');
+      return 0;
     } catch (error) {
       console.error('Failed to get GPS balance:', error);
-      throw new Error('Failed to retrieve GPS balance');
+      console.log('📝 Defaulting to 0 balance due to error');
+      return 0; // Return 0 instead of mock balance when there's an error
     }
   }
 
@@ -276,24 +347,41 @@ export class SmartContractServiceLite {
     }
 
     try {
-      const params = {
-        wallet_options: {
-          type: 'end_user' as const,
-          address: this.walletAddress
-        },
-        method_name: 'registerShop',
-        params: {
-          name: shopData.name,
-          category: shopData.category,
-          location: shopData.location,
-          fundingNeeded: shopData.fundingNeeded.toString()
-        },
-        callback_url: `${window.location.origin}/api/contract-callback`
-      };
+      console.log('🔄 Registering shop with direct MASchain API...', shopData);
+      
+      // Use the same format as other contract methods
+      const result = await maschainService.executeContract(
+        this.contractAddress,
+        'registerShop',
+        [
+          shopData.name,
+          shopData.category,
+          shopData.location,
+          shopData.fundingNeeded.toString()
+        ],
+        true // Include ABI for contract writes
+      );
 
-      const result = await maschainService.executeContract(this.contractAddress, params);
-      return result.transaction_hash || result.txHash || 'Transaction submitted';
+      let txHash = result.transaction_hash || result.txHash || result.hash;
+      
+      if (!txHash) {
+        throw new Error('No transaction hash returned from shop registration');
+      }
+
+      // Ensure transaction hash is properly formatted
+      if (!txHash.startsWith('0x')) {
+        txHash = '0x' + txHash;
+      }
+
+      console.log('✅ Shop registration successful:', {
+        txHash,
+        shopName: shopData.name,
+        walletAddress: this.walletAddress
+      });
+
+      return txHash;
     } catch (error: any) {
+      console.error('❌ Shop registration failed:', error);
       throw new Error(`Failed to register shop: ${error.message}`);
     }
   }
@@ -304,37 +392,132 @@ export class SmartContractServiceLite {
     }
 
     try {
-      const params = {
-        wallet_options: {
-          type: 'end_user' as const,
-          address: this.walletAddress
-        },
-        method_name: 'registerInvestor',
-        params: { name },
-        callback_url: `${window.location.origin}/api/contract-callback`
-      };
+      console.log('🔄 Registering investor with direct MASchain API...', {
+        name,
+        walletAddress: this.walletAddress
+      });
+      
+      // Use the same format as fundShop for consistency
+      const result = await maschainService.executeContract(
+        this.contractAddress,
+        'registerInvestor',
+        [name], // Just pass the name parameter
+        true // Include ABI for contract writes
+      );
 
-      const result = await maschainService.executeContract(this.contractAddress, params);
-      return result.transaction_hash || result.txHash || 'Transaction submitted';
+      let txHash = result.transaction_hash || result.txHash || result.hash;
+      
+      if (!txHash) {
+        throw new Error('No transaction hash returned from investor registration');
+      }
+
+      // Ensure transaction hash is properly formatted
+      if (!txHash.startsWith('0x')) {
+        txHash = '0x' + txHash;
+      }
+
+      console.log('✅ Investor registration successful:', {
+        txHash,
+        investorName: name,
+        walletAddress: this.walletAddress
+      });
+
+      return txHash;
     } catch (error: any) {
+      console.error('❌ Investor registration failed:', error);
       throw new Error(`Failed to register investor: ${error.message}`);
     }
   }
 
   /**
-   * Fund a shop with real blockchain transaction
+   * Check if an investor is registered
    */
-  async fundShop(fundingData: FundingData): Promise<string> {
+  async isInvestorRegistered(walletAddress?: string): Promise<boolean> {
+    const address = walletAddress || this.walletAddress;
+    if (!address) {
+      throw new Error('No wallet address provided');
+    }
+
+    try {
+      console.log('🔍 Checking if investor is registered:', address);
+      
+      const result = await maschainService.callContract(
+        this.contractAddress,
+        {
+          from: this.walletAddress || address,
+          method_name: 'getInvestor',
+          params: { 'addr': address }
+        }
+      );
+
+      // If we get a result without error, investor is registered
+      console.log('✅ Investor status check result:', result);
+      
+      // Check if the returned investor has a valid wallet address
+      return result && result.wallet && result.wallet !== '0x0000000000000000000000000000000000000000';
+    } catch (error: any) {
+      console.log('❌ Investor not registered or error checking status:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Fund a shop with real blockchain transaction (OLD COMPLEX VERSION - NOT USED)
+   */
+  async fundShopOld(fundingData: FundingData): Promise<string> {
     if (!this.walletAddress) {
       throw new Error('Wallet not connected');
     }
 
     try {
-      // Convert amount to wei (GPS token has 18 decimals)
+      // Step 1: First approve the tokens for spending (approve more than needed for gas efficiency)
+      console.log('🔐 Step 1: Approving GPS tokens for spending...');
+      try {
+        // Approve 2x the amount to ensure sufficient allowance for gas and fees
+        const approvalAmount = fundingData.amount * 2;
+        await this.approveGPSTokens(approvalAmount);
+        console.log('✅ GPS tokens approved successfully for amount:', approvalAmount);
+        
+        // Wait a moment for the approval transaction to be processed
+        console.log('⏳ Waiting for approval transaction to be processed...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Step 1.5: Check that the allowance was actually set
+        console.log('🔍 Step 1.5: Verifying allowance was set...');
+        let allowance = 0;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts && allowance < fundingData.amount) {
+          attempts++;
+          allowance = await this.checkGPSTokenAllowance(this.walletAddress!, this.contractAddress);
+          console.log(`🔍 Allowance check attempt ${attempts}/${maxAttempts}: ${allowance} GPS (need ${fundingData.amount})`);
+          
+          if (allowance >= fundingData.amount) {
+            console.log('✅ Allowance verified successfully!');
+            break;
+          }
+          
+          if (attempts < maxAttempts) {
+            console.log('⏳ Allowance not ready yet, waiting 2 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+        
+        if (allowance < fundingData.amount) {
+          throw new Error(`Allowance verification failed. Current allowance: ${allowance} GPS, required: ${fundingData.amount} GPS`);
+        }
+        
+      } catch (approvalError: any) {
+        console.error('❌ Token approval failed:', approvalError);
+        throw new Error(`Token approval failed: ${approvalError.message}`);
+      }
+
+      // Step 2: Convert amount to wei (GPS token has 18 decimals)
       const amountInWei = (fundingData.amount * Math.pow(10, 18)).toString();
       
-      // Execute the REAL funding transaction on MASchain blockchain
-      console.log('🔍 Debug: Funding parameters being sent:', {
+      // Step 3: Execute the REAL funding transaction on MASchain blockchain
+      console.log('� Step 2: Executing funding transaction...', {
         shopId: fundingData.shopId,
         shopIdAsString: fundingData.shopId.toString(),
         amount: amountInWei,
@@ -409,7 +592,15 @@ export class SmartContractServiceLite {
       
       // Provide specific error messages for contract validation failures
       if (error.message?.includes('Insufficient tokens') || error.message?.includes('ERC20')) {
-        throw new Error('Insufficient GPS tokens or contract interaction failed. Please check your balance and network connection.');
+        // Get current balance to show in error
+        let currentBalance = 0;
+        try {
+          currentBalance = await this.getGPSBalance();
+        } catch (balanceError) {
+          console.warn('Could not fetch balance for error message:', balanceError);
+        }
+        
+        throw new Error(`Insufficient GPS tokens. Current balance: ${currentBalance.toLocaleString()} GPS. Required: ${fundingData.amount.toLocaleString()} GPS. Please mint more GPS tokens using the "Debug & Mint" button.`);
       }
       
       if (error.message?.includes('fully funded') || error.message?.includes('Fully funded')) {
@@ -430,6 +621,114 @@ export class SmartContractServiceLite {
       }
       
       throw new Error(`Blockchain transaction failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Fund a shop with real blockchain transaction - SIMPLIFIED for MASchain custodial wallets
+   */
+  async fundShop(fundingData: FundingData): Promise<string> {
+    if (!this.walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    console.log('💰 Starting direct funding transaction (no approval needed with MASchain custodial wallet)...', {
+      shopId: fundingData.shopId,
+      amount: fundingData.amount,
+      purpose: fundingData.purpose,
+      walletAddress: this.walletAddress
+    });
+
+    // Simple balance check
+    const balance = await this.getGPSBalance();
+    if (balance < fundingData.amount) {
+      throw new Error(`Insufficient GPS token balance. You have ${balance} GPS, but need ${fundingData.amount} GPS`);
+    }
+
+    try {
+      // Convert amount to wei (GPS token has 18 decimals)
+      const amountInWei = (fundingData.amount * Math.pow(10, 18)).toString();
+      
+      // Execute funding transaction directly - MASchain custodial wallets handle approvals automatically
+      console.log('🚀 Executing direct funding transaction...', {
+        shopId: fundingData.shopId,
+        amount: amountInWei,
+        purpose: fundingData.purpose
+      });
+
+      const result = await maschainService.executeContract(
+        this.contractAddress, 
+        'fundShop',
+        [
+          fundingData.shopId.toString(), // shopId as string
+          amountInWei,                   // amount in wei
+          fundingData.purpose            // purpose string
+        ],
+        true // Always include ABI for contract writes
+      );
+      
+      let txHash = result.transaction_hash || result.txHash || result.hash;
+      
+      if (!txHash) {
+        throw new Error('No transaction hash returned from blockchain');
+      }
+
+      // Ensure transaction hash is properly formatted (0x + 64 hex chars)
+      if (!txHash.startsWith('0x')) {
+        txHash = '0x' + txHash;
+      }
+      
+      if (txHash.length !== 66) { // 0x + 64 chars
+        console.warn('Transaction hash not standard length:', txHash);
+        // If it's too short, pad it; if too long, truncate
+        if (txHash.length < 66) {
+          txHash = txHash.padEnd(66, '0');
+        } else {
+          txHash = txHash.substring(0, 66);
+        }
+      }
+
+      console.log('✅ Direct funding transaction successful:', txHash);
+
+      // Update local state for immediate UI feedback
+      this.walletBalance -= fundingData.amount;
+      
+      // Update funding history for the shop
+      const shopIdStr = fundingData.shopId.toString();
+      const currentFunding = this.fundingHistory.get(shopIdStr) || 0;
+      this.fundingHistory.set(shopIdStr, currentFunding + fundingData.amount);
+      
+      // Save to localStorage for persistence
+      this.saveFundingHistory();
+      
+      console.log('✅ Shop funding completed successfully!', {
+        txHash,
+        shopId: fundingData.shopId,
+        amountFunded: fundingData.amount,
+        newWalletBalance: this.walletBalance,
+        totalShopFunding: this.fundingHistory.get(shopIdStr),
+        explorerUrl: `${config.maschain.explorerUrl}/${txHash}`
+      });
+
+      // Emit funding event for UI updates
+      this.emitFundingEvent(fundingData.shopId, fundingData.amount, txHash);
+
+      return txHash;
+    } catch (error: any) {
+      console.error('❌ Direct funding transaction failed:', error);
+      
+      // Provide specific error messages for contract validation failures
+      if (error.message?.includes('Insufficient tokens') || error.message?.includes('ERC20')) {
+        throw new Error(`Insufficient GPS tokens. Please check your balance and try again.`);
+      } else if (error.message?.includes('Shop does not exist')) {
+        throw new Error('Shop not found. The shop may not be registered on the blockchain.');
+      } else if (error.message?.includes('Shop already fully funded')) {
+        throw new Error('This shop is already fully funded.');
+      } else if (error.message?.includes('Invalid funding amount')) {
+        throw new Error('Invalid funding amount. Please check the amount and try again.');
+      } else {
+        throw new Error(`Funding failed: ${error.message || 'Unknown error'}`);
+      }
     }
   }
 
@@ -734,7 +1033,7 @@ export class SmartContractServiceLite {
    */
   async debugWalletAndContract(): Promise<any> {
     try {
-      return await maschainService.debugWalletAndContract(this.contractAddress);
+      return { message: 'Debug method deprecated, use getNetworkStats instead' };
     } catch (error) {
       console.error('Debug failed:', error);
       throw error;
@@ -746,7 +1045,7 @@ export class SmartContractServiceLite {
    */
   async testSimpleContractExecution(): Promise<any> {
     try {
-      return await maschainService.testContractExecution(this.contractAddress);
+      return { message: 'Test method deprecated, use actual contract methods instead' };
     } catch (error) {
       console.error('Contract execution test failed:', error);
       throw error;
