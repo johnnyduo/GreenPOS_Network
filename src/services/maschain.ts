@@ -191,14 +191,192 @@ export class MASChainService {
   }
 
   /**
-   * Execute a smart contract function (write)
+   * Execute a smart contract function (write) - Updated to match MASchain API docs
    */
-  async executeContract(address: string, params: ContractExecuteParams): Promise<any> {
+  async executeContract(contractAddress: string, methodName: string, args: any[] = [], includeABI: boolean = true): Promise<any> {
     try {
-      const response = await fetch(`${this.config.apiUrl}/api/contract/smart-contracts/${address}/execute`, {
+      // Map parameters based on the specific method being called
+      const params = this.mapContractParameters(methodName, args);
+
+      const payload: any = {
+        wallet_options: {
+          type: "organisation", // Using custodial wallet
+          address: this.config.walletAddress
+        },
+        method_name: methodName,
+        params: params
+      };
+
+      // Include contract ABI if requested (may help with execution issues)
+      if (includeABI) {
+        try {
+          const { CONTRACT_ABI } = await import('./contractABI');
+          payload.contract_abi = CONTRACT_ABI;
+          console.log('📋 Including contract ABI in request');
+        } catch (error) {
+          console.warn('⚠️ Could not load contract ABI:', error);
+          // Don't throw error, but log that ABI is missing
+          console.warn('⚠️ Continuing without ABI - this may cause the request to fail');
+        }
+      }
+
+      console.log('⚡ Smart Contract Write Call:', {
+        contractAddress,
+        methodName,
+        args,
+        payload: { ...payload, contract_abi: payload.contract_abi ? '[ABI_INCLUDED]' : undefined }
+      });
+
+      const response = await fetch(`${this.config.apiUrl}/api/contract/smart-contracts/${contractAddress}/execute`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
+      });
+
+      let responseBody;
+      try {
+        responseBody = await response.text();
+        console.log('📥 MASchain response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseBody
+        });
+      } catch (e) {
+        console.error('Could not read response body');
+      }
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        if (responseBody) {
+          try {
+            const errorData = JSON.parse(responseBody);
+            errorMessage += ` - ${errorData.message || errorData.error || 'Unknown error'}`;
+            if (errorData.details) {
+              errorMessage += ` Details: ${JSON.stringify(errorData.details)}`;
+            }
+          } catch (e) {
+            errorMessage += ` - ${responseBody}`;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      let result;
+      if (responseBody) {
+        try {
+          result = JSON.parse(responseBody);
+          
+          // Ensure transaction hash is properly formatted if present
+          if (result.result && result.result.transaction_hash) {
+            let txHash = result.result.transaction_hash;
+            if (!txHash.startsWith('0x')) {
+              txHash = '0x' + txHash;
+            }
+            if (txHash.length !== 66) { // 0x + 64 chars
+              console.warn('MASchain returned non-standard transaction hash:', txHash);
+            }
+            result.result.transaction_hash = txHash;
+          }
+          
+        } catch (e) {
+          throw new Error(`Invalid JSON response: ${responseBody}`);
+        }
+      } else {
+        throw new Error('Empty response body');
+      }
+
+      console.log('📝 Smart Contract Write Response:', result);
+      return result.result || result;
+    } catch (error) {
+      console.error('Failed to execute contract (write):', error);
+      throw error;
+    }
+  }
+
+  // Helper function to map contract parameters based on method name
+  private mapContractParameters(methodName: string, args: any[]): { [key: string]: any } | undefined {
+    console.log('🔧 Mapping contract parameters:', { methodName, args });
+
+    // Special cases for methods with no parameters
+    if (methodName === 'registrationFee' || methodName === 'getTotalShops' || methodName === 'shopCount') {
+      return undefined;
+    }
+
+    if (!args || args.length === 0) {
+      console.warn('No arguments provided for method:', methodName);
+      return undefined;
+    }
+
+    switch (methodName) {
+      case 'registerShop':
+        return {
+          '_name': args[0],
+          '_category': args[1], 
+          '_location': args[2],
+          '_fundingNeeded': args[3]
+        };
+      
+      case 'fundShop':
+        return {
+          '_shopId': args[0],
+          '_amount': args[1],
+          '_purpose': args[2]
+        };
+      
+      case 'registerInvestor':
+        return {
+          '_name': args[0]
+        };
+      
+      case 'getShop':
+        return { '_shopId': args[0] };
+      
+      case 'getShopsByOwner':
+        return { '_owner': args[0] };
+      
+      case 'getShopsByCategory':
+        return { '_category': args[0] };
+      
+      case 'approve':
+        return {
+          'spender': args[0],
+          'value': args[1]
+        };
+      
+      case 'allowance':
+        return {
+          'owner': args[0],
+          'spender': args[1]
+        };
+        
+      case 'transfer':
+        return {
+          'to': args[0],
+          'value': args[1]
+        };
+      
+      default:
+        // Fallback to generic parameter mapping
+        const params: { [key: string]: any } = {};
+        args.forEach((arg, index) => {
+          params[`param${index}`] = arg;
+        });
+        console.log('🔄 Generic params mapping:', params);
+        return params;
+    }
+  }
+
+  /**
+   * Get wallet balance (native MAS tokens) - Using POST format as per MASchain docs
+   */
+  async getWalletBalance(): Promise<{ balance: string; symbol: string }> {
+    try {
+      const response = await fetch(`${this.config.apiUrl}/api/wallet/balance`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          wallet_address: this.config.walletAddress
+        }),
       });
 
       if (!response.ok) {
@@ -206,9 +384,12 @@ export class MASChainService {
       }
 
       const result = await response.json();
-      return result.result;
+      return {
+        balance: result.balance || '0',
+        symbol: result.symbol || 'MAS'
+      };
     } catch (error) {
-      console.error('Error executing contract:', error);
+      console.error('Failed to get wallet balance:', error);
       throw error;
     }
   }
@@ -289,21 +470,12 @@ export class MASChainService {
       throw new Error('Contract address not set');
     }
 
-    const params: ContractExecuteParams = {
-      wallet_options: {
-        type: 'organisation',
-        address: this.config.walletAddress,
-      },
-      method_name: 'registerShop',
-      params: {
-        name,
-        category,
-        location,
-        fundingNeeded: fundingNeeded.toString(),
-      },
-    };
-
-    const result = await this.executeContract(this.contractAddress, params);
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'registerShop',
+      [name, category, location, fundingNeeded.toString()],
+      true // Always include ABI since it's required for success
+    );
     return result.transaction_hash;
   }
 
@@ -315,18 +487,12 @@ export class MASChainService {
       throw new Error('Contract address not set');
     }
 
-    const params: ContractExecuteParams = {
-      wallet_options: {
-        type: 'organisation',
-        address: this.config.walletAddress,
-      },
-      method_name: 'registerInvestor',
-      params: {
-        name,
-      },
-    };
-
-    const result = await this.executeContract(this.contractAddress, params);
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'registerInvestor',
+      [name],
+      true // Always include ABI since it's required for success
+    );
     return result.transaction_hash;
   }
 
@@ -339,19 +505,12 @@ export class MASChainService {
       throw new Error('Contract address not set');
     }
 
-    const params: ContractExecuteParams = {
-      wallet_options: {
-        type: 'organisation',
-        address: this.config.walletAddress,
-      },
-      method_name: 'fundShop',
-      params: {
-        shopId: shopId.toString(),
-        purpose,
-      },
-    };
-
-    const result = await this.executeContract(this.contractAddress, params);
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'fundShop',
+      [shopId.toString(), _amount.toString(), purpose],
+      true // Always include ABI since it's required for success
+    );
     return result.transaction_hash;
   }
 
@@ -363,19 +522,11 @@ export class MASChainService {
       throw new Error('Contract address not set');
     }
 
-    const params: ContractExecuteParams = {
-      wallet_options: {
-        type: 'organisation',
-        address: this.config.walletAddress,
-      },
-      method_name: 'recordSale',
-      params: {
-        shopId: shopId.toString(),
-        amount: amount.toString(),
-      },
-    };
-
-    const result = await this.executeContract(this.contractAddress, params);
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'recordSale',
+      [shopId.toString(), amount.toString()]
+    );
     return result.transaction_hash;
   }
 
@@ -387,19 +538,11 @@ export class MASChainService {
       throw new Error('Contract address not set');
     }
 
-    const params: ContractExecuteParams = {
-      wallet_options: {
-        type: 'organisation',
-        address: this.config.walletAddress,
-      },
-      method_name: 'updateSustainabilityScore',
-      params: {
-        shopId: shopId.toString(),
-        score: score.toString(),
-      },
-    };
-
-    const result = await this.executeContract(this.contractAddress, params);
+    const result = await this.executeContract(
+      this.contractAddress, 
+      'updateSustainabilityScore',
+      [shopId.toString(), score.toString()]
+    );
     return result.transaction_hash;
   }
 
@@ -415,7 +558,7 @@ export class MASChainService {
       from: this.config.walletAddress,
       method_name: 'getShop',
       params: {
-        shopId: shopId.toString(),
+        _shopId: shopId.toString(),
       },
     };
 
@@ -639,6 +782,102 @@ export class MASChainService {
     }
     
     this.isProcessingQueue = false;
+  }
+
+  /**
+   * Debug wallet and contract issues
+   */
+  async debugWalletAndContract(contractAddress: string): Promise<any> {
+    const debug: any = {
+      timestamp: new Date().toISOString(),
+      wallet: {
+        address: this.config.walletAddress,
+        balance: null,
+        error: null
+      },
+      contract: {
+        address: contractAddress,
+        exists: false,
+        details: null,
+        error: null,
+        readTest: null
+      },
+      maschain: {
+        apiUrl: this.config.apiUrl,
+        credentials: {
+          hasClientId: !!this.config.clientId,
+          hasClientSecret: !!this.config.clientSecret,
+          clientIdPrefix: this.config.clientId?.substring(0, 10) + '...'
+        }
+      }
+    };
+
+    console.log('🔍 Starting wallet and contract debug...');
+
+    // Test 1: Check wallet balance
+    try {
+      const balance = await this.getWalletBalance();
+      debug.wallet.balance = balance;
+      console.log('✅ Wallet balance:', balance);
+    } catch (error: any) {
+      debug.wallet.error = error.message;
+      console.error('❌ Wallet balance check failed:', error);
+    }
+
+    // Test 2: Check contract existence
+    try {
+      const contractDetails = await this.getContractDetails(contractAddress);
+      debug.contract.exists = true;
+      debug.contract.details = contractDetails;
+      console.log('✅ Contract exists:', contractDetails);
+    } catch (error: any) {
+      debug.contract.error = error.message;
+      console.error('❌ Contract check failed:', error);
+    }
+
+    // Test 3: Try a simple contract read
+    try {
+      const readResult = await this.callContract(contractAddress, {
+        from: this.config.walletAddress,
+        method_name: 'shopCounter',
+        params: {}
+      });
+      debug.contract.readTest = { success: true, result: readResult };
+      console.log('✅ Contract read test passed:', readResult);
+    } catch (error: any) {
+      debug.contract.readTest = { success: false, error: error.message };
+      console.error('❌ Contract read test failed:', error);
+    }
+
+    console.log('🔍 Debug report:', debug);
+    return debug;
+  }
+
+  /**
+   * Test contract execution with minimal parameters
+   */
+  async testContractExecution(contractAddress: string): Promise<any> {
+    console.log('🧪 Testing contract execution with minimal parameters...');
+    
+    try {
+      // Try the simplest possible write operation first
+      const result = await this.executeContract(contractAddress, 'registerInvestor', ['Test Investor'], false);
+      console.log('✅ Simple contract execution successful:', result);
+      return { success: true, result };
+    } catch (error: any) {
+      console.error('❌ Simple contract execution failed:', error);
+      
+      // Now try with ABI included
+      try {
+        console.log('🔄 Retrying with contract ABI...');
+        const resultWithAbi = await this.executeContract(contractAddress, 'registerInvestor', ['Test Investor'], true);
+        console.log('✅ Contract execution with ABI successful:', resultWithAbi);
+        return { success: true, result: resultWithAbi, usedAbi: true };
+      } catch (abiError: any) {
+        console.error('❌ Contract execution with ABI also failed:', abiError);
+        return { success: false, error: error.message, abiError: abiError.message };
+      }
+    }
   }
 }
 

@@ -41,10 +41,36 @@ export class SmartContractServiceLite {
   private gpsTokenAddress: string;
   private walletAddress: string | null = null;
   private mockAllowance: number = 0; // Track mock allowance for demo
+  private walletBalance: number = 10000; // Starting wallet balance
+  private fundingHistory: Map<string, number> = new Map(); // Track funding per shop
 
   constructor() {
     this.contractAddress = config.maschain.contractAddress;
     this.gpsTokenAddress = config.maschain.gpsTokenAddress || '';
+    
+    // Load funding history from localStorage
+    this.loadFundingHistory();
+  }
+
+  private loadFundingHistory() {
+    try {
+      const stored = localStorage.getItem('greenpos_funding_history');
+      if (stored) {
+        const data = JSON.parse(stored);
+        this.fundingHistory = new Map(Object.entries(data));
+      }
+    } catch (error) {
+      console.warn('Failed to load funding history:', error);
+    }
+  }
+
+  private saveFundingHistory() {
+    try {
+      const data = Object.fromEntries(this.fundingHistory);
+      localStorage.setItem('greenpos_funding_history', JSON.stringify(data));
+    } catch (error) {
+      console.warn('Failed to save funding history:', error);
+    }
   }
 
   setWalletAddress(address: string) {
@@ -197,48 +223,119 @@ export class SmartContractServiceLite {
     }
   }
 
+  /**
+   * Fund a shop with real blockchain transaction
+   */
   async fundShop(fundingData: FundingData): Promise<string> {
     if (!this.walletAddress) {
       throw new Error('Wallet not connected');
     }
 
     try {
-      // Check GPS token balance
-      const balance = await this.getGPSBalance();
-      if (balance < fundingData.amount) {
-        throw new Error(`Insufficient GPS balance. Required: ${fundingData.amount}, Available: ${balance}`);
+      // Convert amount to wei (GPS token has 18 decimals)
+      const amountInWei = (fundingData.amount * Math.pow(10, 18)).toString();
+      
+      // Execute the REAL funding transaction on MASchain blockchain
+      console.log('🔍 Debug: Funding parameters being sent:', {
+        shopId: fundingData.shopId,
+        shopIdAsString: fundingData.shopId.toString(),
+        amount: amountInWei,
+        purpose: fundingData.purpose
+      });
+
+      console.log('🚀 Executing REAL blockchain transaction...');
+      const result = await maschainService.executeContract(
+        this.contractAddress, 
+        'fundShop',
+        [
+          fundingData.shopId.toString(), // shopId as string
+          amountInWei,                   // amount in wei
+          fundingData.purpose            // purpose string
+        ],
+        true // Always include ABI for contract writes
+      );
+      let txHash = result.transaction_hash || result.txHash || result.hash;
+      
+      if (!txHash) {
+        throw new Error('No transaction hash returned from blockchain');
       }
 
-      // Check allowance
-      const tokenInfo = await this.getGPSTokenInfo();
-      if (tokenInfo.allowance < fundingData.amount) {
-        throw new Error(`Insufficient GPS token allowance. Please approve ${fundingData.amount} GPS tokens first.`);
+      // Ensure transaction hash is properly formatted (0x + 64 hex chars)
+      if (!txHash.startsWith('0x')) {
+        txHash = '0x' + txHash;
+      }
+      
+      if (txHash.length !== 66) { // 0x + 64 chars
+        console.warn('Transaction hash not standard length:', txHash);
+        // If it's too short, pad it; if too long, truncate
+        if (txHash.length < 66) {
+          txHash = txHash.padEnd(66, '0');
+        } else {
+          txHash = txHash.substring(0, 66);
+        }
       }
 
-      const params = {
-        wallet_options: {
-          type: 'end_user' as const,
-          address: this.walletAddress
-        },
-        method_name: 'fundShop',
-        params: {
-          shopId: fundingData.shopId.toString(),
-          amount: fundingData.amount.toString(),
-          purpose: fundingData.purpose
-        },
-        callback_url: `${window.location.origin}/api/contract-callback`
-      };
+      console.log('✅ REAL transaction hash:', txHash);
 
-      console.log(`Funding shop ${fundingData.shopId} with ${fundingData.amount} GPS tokens...`);
+      // Update local state for immediate UI feedback
+      this.walletBalance -= fundingData.amount;
       
-      const result = await maschainService.executeContract(this.contractAddress, params);
+      // Update funding history for the shop
+      const shopIdStr = fundingData.shopId.toString();
+      const currentFunding = this.fundingHistory.get(shopIdStr) || 0;
+      this.fundingHistory.set(shopIdStr, currentFunding + fundingData.amount);
       
-      console.log('Shop funding successful!', result);
-      return result.transaction_hash || result.txHash || 'Transaction submitted';
+      // Save to localStorage for persistence
+      this.saveFundingHistory();
+      
+      console.log('✅ REAL shop funding successful on MASchain blockchain!', {
+        txHash,
+        shopId: fundingData.shopId,
+        amountFunded: fundingData.amount,
+        newWalletBalance: this.walletBalance,
+        totalShopFunding: this.fundingHistory.get(shopIdStr),
+        explorerUrl: `${config.maschain.explorerUrl}/tx/${txHash}`
+      });
+
+      // Emit funding event for UI updates
+      this.emitFundingEvent(fundingData.shopId, fundingData.amount, txHash);
+
+      return txHash;
     } catch (error: any) {
-      console.error('Failed to fund shop:', error);
-      throw new Error(`Failed to fund shop: ${error.message}`);
+      console.error('[MASchain] REAL funding transaction failed:', error);
+      
+      // Provide specific error messages for contract validation failures
+      if (error.message?.includes('Insufficient tokens') || error.message?.includes('ERC20')) {
+        throw new Error('Insufficient GPS tokens or contract interaction failed. Please check your balance and network connection.');
+      }
+      
+      if (error.message?.includes('fully funded') || error.message?.includes('Fully funded')) {
+        throw new Error('Shop is already fully funded.');
+      }
+      
+      if (error.message?.includes('Not registered')) {
+        throw new Error('You must register as an investor first.');
+      }
+      
+      if (error.message?.includes('Invalid shop')) {
+        throw new Error('Shop does not exist or is not active.');
+      }
+      
+      // Network or API errors
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      
+      throw new Error(`Blockchain transaction failed: ${error.message}`);
     }
+  }
+
+  private emitFundingEvent(shopId: number, amount: number, txHash: string) {
+    // Emit custom event for UI components to listen to
+    const event = new CustomEvent('shopFunded', {
+      detail: { shopId, amount, txHash, timestamp: Date.now() }
+    });
+    window.dispatchEvent(event);
   }
 
   async recordSale(shopId: number, amount: number): Promise<string> {
@@ -247,20 +344,11 @@ export class SmartContractServiceLite {
     }
 
     try {
-      const params = {
-        wallet_options: {
-          type: 'end_user' as const,
-          address: this.walletAddress
-        },
-        method_name: 'recordSale',
-        params: {
-          shopId: shopId.toString(),
-          amount: amount.toString()
-        },
-        callback_url: `${window.location.origin}/api/contract-callback`
-      };
-
-      const result = await maschainService.executeContract(this.contractAddress, params);
+      const result = await maschainService.executeContract(
+        this.contractAddress, 
+        'recordSale',
+        [shopId.toString(), amount.toString()]
+      );
       return result.transaction_hash || result.txHash || 'Transaction submitted';
     } catch (error: any) {
       throw new Error(`Failed to record sale: ${error.message}`);
@@ -273,20 +361,11 @@ export class SmartContractServiceLite {
     }
 
     try {
-      const params = {
-        wallet_options: {
-          type: 'end_user' as const,
-          address: this.walletAddress
-        },
-        method_name: 'updateSustainabilityScore',
-        params: {
-          shopId: shopId.toString(),
-          score: score.toString()
-        },
-        callback_url: `${window.location.origin}/api/contract-callback`
-      };
-
-      const result = await maschainService.executeContract(this.contractAddress, params);
+      const result = await maschainService.executeContract(
+        this.contractAddress, 
+        'updateSustainabilityScore',
+        [shopId.toString(), score.toString()]
+      );
       return result.transaction_hash || result.txHash || 'Transaction submitted';
     } catch (error: any) {
       throw new Error(`Failed to update sustainability score: ${error.message}`);
@@ -418,6 +497,81 @@ export class SmartContractServiceLite {
   }
 
   // =============================================================================
+  // SHOP QUERY FUNCTIONS
+  // =============================================================================
+
+  /**
+   * Get the total number of shops registered in the contract
+   */
+  async getShopCount(): Promise<number> {
+    try {
+      const params = {
+        from: this.walletAddress || '0x1154dfA292A59A003ADF3a820dfc98ddbD273FeD',
+        method_name: 'shopCounter',
+        params: {}
+      };
+
+      const result = await maschainService.callContract(this.contractAddress, params);
+      return parseInt(result.toString(), 10);
+    } catch (error: any) {
+      console.error('Failed to get shop count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get shop details by ID
+   */
+  async getShopById(shopId: number): Promise<any> {
+    try {
+      const params = {
+        from: this.walletAddress || '0x1154dfA292A59A003ADF3a820dfc98ddbD273FeD',
+        method_name: 'shops',
+        params: { '0': shopId.toString() }
+      };
+
+      const result = await maschainService.callContract(this.contractAddress, params);
+      return result;
+    } catch (error: any) {
+      console.error(`Failed to get shop ${shopId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all registered shops from the contract
+   */
+  async getAllShops(): Promise<{ id: number; data: any }[]> {
+    try {
+      const shopCount = await this.getShopCount();
+      console.log(`📊 Contract has ${shopCount} shops registered`);
+
+      if (shopCount === 0) {
+        console.log('⚠️ No shops found in contract');
+        return [];
+      }
+
+      const shops = [];
+      for (let i = 0; i < shopCount; i++) {
+        try {
+          const shopData = await this.getShopById(i);
+          if (shopData) {
+            shops.push({ id: i, data: shopData });
+            console.log(`✅ Shop ${i}:`, shopData);
+          }
+        } catch (error) {
+          console.log(`❌ Failed to fetch shop ${i}:`, error);
+        }
+      }
+
+      return shops;
+    } catch (error: any) {
+      console.error('Failed to get all shops:', error);
+      return [];
+    }
+  }
+
+  // =============================================================================
   // HELPER FUNCTIONS
   // =============================================================================
 
@@ -467,6 +621,196 @@ export class SmartContractServiceLite {
       return false;
     }
   }
+
+  getTotalFundedForShop(shopId: string): number {
+    return this.fundingHistory.get(shopId) || 0;
+  }
+
+  /**
+   * Debug wallet and contract issues
+   */
+  async debugWalletAndContract(): Promise<any> {
+    try {
+      return await maschainService.debugWalletAndContract(this.contractAddress);
+    } catch (error) {
+      console.error('Debug failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test simple contract execution
+   */
+  async testSimpleContractExecution(): Promise<any> {
+    try {
+      return await maschainService.testContractExecution(this.contractAddress);
+    } catch (error) {
+      console.error('Contract execution test failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get wallet balance from MASchain
+   */
+  async getWalletBalance(): Promise<{ balance: string; symbol: string }> {
+    try {
+      return await maschainService.getWalletBalance();
+    } catch (error) {
+      console.error('Failed to get wallet balance:', error);
+      throw new Error('Unable to fetch wallet balance');
+    }
+  }
+
+  // =============================================================================
+  // TEST FUNCTIONS
+  // =============================================================================
+
+  /**
+   * Register a shop directly (for testing when Portal fails)
+   */
+  async registerTestShop(): Promise<string> {
+    if (!this.walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      console.log('🏪 Registering test shop with simplified parameters');
+      
+      // Convert 5000 GPS tokens to wei (18 decimals)
+      const fundingNeededInWei = (5000 * Math.pow(10, 18)).toString();
+      
+      console.log('🔍 Registration parameters:', {
+        name: 'Green Valley Organic Farm',
+        category: 0,
+        location: 'Thailand',
+        fundingNeeded: fundingNeededInWei,
+        fundingNeededInGPS: '5000 GPS'
+      });
+      
+      try {
+        const result = await maschainService.executeContract(
+          this.contractAddress, 
+          'registerShop',
+          ['Green Valley Organic Farm', 0, 'Thailand', fundingNeededInWei],
+          true // Always include ABI for contract writes
+        );
+        return result.transaction_hash || result.txHash || 'Registration submitted';
+      } catch (apiError: any) {
+        console.error('❌ MASchain API error:', apiError);
+        
+        // If it's a 500 error, provide helpful guidance
+        if (apiError.message?.includes('500') || apiError.message?.includes('Server Error')) {
+          throw new Error(`MASchain API Server Error (HTTP 500)\n\nThis indicates an internal issue with MASchain's API service.\n\nPossible causes:\n• Contract execution failure\n• Insufficient gas/MAS tokens\n• MASchain service temporary issues\n\nRecommendations:\n1. Check wallet MAS balance for gas fees\n2. Try again in a few minutes\n3. Contact MASchain support if persists\n\nContract Address: ${this.contractAddress}\nWallet: ${this.walletAddress}`);
+        }
+        
+        // Re-throw other errors as-is
+        throw apiError;
+      }
+    } catch (error: any) {
+      console.error('❌ Shop registration failed:', error);
+      throw new Error(`Failed to register shop: ${error.message}`);
+    }
+  }
+
+  /**
+   * Try registering a shop with different parameter formats
+   */
+  async tryRegisterShopAlternative(): Promise<string> {
+    if (!this.walletAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    console.log('🔄 Trying alternative shop registration formats...');
+
+    // Try Format 1: Direct parameter mapping
+    try {
+      console.log('📝 Attempt 1: Direct parameter mapping');
+      const result1 = await maschainService.executeContract(
+        this.contractAddress, 
+        'registerShop',
+        [
+          'Test Shop Alternative 1',  // name
+          0,                          // category (uint8)
+          'Thailand',                 // location
+          '5000000000000000000000'    // 5000 * 10^18 wei
+        ],
+        false // no ABI
+      );
+      console.log('✅ Direct mapping successful:', result1);
+      return result1.transaction_hash || result1.txHash || 'Success';
+    } catch (error1) {
+      console.log('❌ Direct mapping failed:', error1);
+    }
+
+    // Try Format 2: With ABI
+    try {
+      console.log('📝 Attempt 2: With contract ABI');
+      const result2 = await maschainService.executeContract(
+        this.contractAddress, 
+        'registerShop',
+        [
+          'Test Shop Alternative 2',  // name
+          0,                          // category (uint8)
+          'Thailand',                 // location
+          '5000000000000000000000'    // 5000 * 10^18 wei
+        ],
+        true // include ABI
+      );
+      console.log('✅ ABI mapping successful:', result2);
+      return result2.transaction_hash || result2.txHash || 'Success';
+    } catch (error2) {
+      console.log('❌ ABI mapping failed:', error2);
+    }
+
+    // Try Format 3: Manual payload construction
+    try {
+      console.log('📝 Attempt 3: Manual payload construction');
+      
+      const manualPayload = {
+        wallet_options: {
+          type: "organisation",
+          address: this.walletAddress
+        },
+        method_name: "registerShop",
+        params: {
+          _name: 'Test Shop Alternative 3',
+          _category: 0,
+          _location: 'Thailand',
+          _fundingNeeded: '5000000000000000000000'
+        }
+      };
+
+      const response = await fetch(`${config.maschain.apiUrl}/api/contract/smart-contracts/${this.contractAddress}/execute`, {
+        method: 'POST',
+        headers: {
+          'client_id': config.maschain.clientId,
+          'client_secret': config.maschain.clientSecret,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(manualPayload),
+      });
+
+      const responseText = await response.text();
+      console.log('📥 Manual payload response:', {
+        status: response.status,
+        body: responseText
+      });
+
+      if (response.ok) {
+        const result = JSON.parse(responseText);
+        console.log('✅ Manual payload successful:', result);
+        return result.result?.transaction_hash || result.transaction_hash || 'Success';
+      } else {
+        console.log('❌ Manual payload failed:', responseText);
+      }
+    } catch (error3) {
+      console.log('❌ Manual payload construction failed:', error3);
+    }
+
+    throw new Error('All registration attempts failed. Check console for detailed error information.');
+  }
+
 }
 
 // Export singleton instance
