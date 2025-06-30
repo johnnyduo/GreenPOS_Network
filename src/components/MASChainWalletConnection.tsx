@@ -155,7 +155,7 @@ export const MASChainWalletConnection: React.FC<WalletConnectionProps> = ({
 
   const openExplorer = () => {
     if (walletState.address) {
-      window.open(`${config.maschain.explorerUrl}/address/${walletState.address}`, '_blank');
+      window.open(`${config.maschain.explorerUrl}/${walletState.address}`, '_blank');
     }
   };
 

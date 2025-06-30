@@ -452,14 +452,14 @@ export class SmartContractService {
    * Get the contract explorer URL
    */
   getContractExplorerUrl(): string {
-    return `${config.maschain.explorerUrl}/address/${this.contractAddress}`;
+    return `${config.maschain.explorerUrl}/${this.contractAddress}`;
   }
 
   /**
    * Get transaction explorer URL
    */
   getTransactionExplorerUrl(txHash: string): string {
-    return `${config.maschain.explorerUrl}/tx/${txHash}`;
+    return `${config.maschain.explorerUrl}/${txHash}`;
   }
 }
 

@@ -95,8 +95,8 @@ export const verifyContractConnections = async (): Promise<ContractVerificationR
       networkContractAddress: networkContractAddress || 'Not configured',
       gpsTokenAddress: gpsTokenAddress || 'Not configured',
       explorerUrls: {
-        networkContract: `${config.maschain.explorerUrl}/address/${networkContractAddress}`,
-        gpsToken: `${config.maschain.explorerUrl}/address/${gpsTokenAddress}`,
+        networkContract: `${config.maschain.explorerUrl}/${networkContractAddress}`,
+        gpsToken: `${config.maschain.explorerUrl}/${gpsTokenAddress}`,
       },
     };
 
@@ -120,8 +120,8 @@ export const verifyContractConnections = async (): Promise<ContractVerificationR
         networkContractAddress: config.maschain.contractAddress || 'Not configured',
         gpsTokenAddress: config.maschain.gpsTokenAddress || 'Not configured',
         explorerUrls: {
-          networkContract: `${config.maschain.explorerUrl}/address/${config.maschain.contractAddress}`,
-          gpsToken: `${config.maschain.explorerUrl}/address/${config.maschain.gpsTokenAddress}`,
+          networkContract: `${config.maschain.explorerUrl}/${config.maschain.contractAddress}`,
+          gpsToken: `${config.maschain.explorerUrl}/${config.maschain.gpsTokenAddress}`,
         },
       },
     };

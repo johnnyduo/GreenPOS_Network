@@ -1,24 +1,27 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, DollarSign, TrendingUp, Target, CreditCard } from 'lucide-react';
+import { X, DollarSign, TrendingUp } from 'lucide-react';
 import { Shop } from '../types';
+import { smartContractService } from '../services/smartContractLite';
 
 interface FundingModalProps {
   isOpen: boolean;
   onClose: () => void;
   shop: Shop | null;
-  onFundingComplete: (shopId: string, amount: number) => void;
+  onFundingComplete: (txHash: string) => void;
+  connectedWallet?: string;
 }
 
 export const FundingModal: React.FC<FundingModalProps> = ({
   isOpen,
   onClose,
   shop,
-  onFundingComplete
+  onFundingComplete,
+  connectedWallet
 }) => {
   const [fundingAmount, setFundingAmount] = useState<number>(1000);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank' | 'crypto'>('card');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [fundingPurpose, setFundingPurpose] = useState<string>('General business support');
 
   if (!shop) return null;
 
@@ -29,14 +32,63 @@ export const FundingModal: React.FC<FundingModalProps> = ({
   const handleFunding = async () => {
     if (fundingAmount <= 0 || fundingAmount > remainingFunding) return;
     
+    if (!connectedWallet) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    
     setIsProcessing(true);
     
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    onFundingComplete(shop.id, fundingAmount);
-    setIsProcessing(false);
-    setFundingAmount(1000);
+    try {
+      console.log('🚀 Executing real blockchain funding transaction...');
+      
+      // Reset circuit breaker before funding
+      try {
+        const { maschainService } = await import('../services/maschain');
+        maschainService.resetCircuitBreaker();
+        console.log('🔄 Circuit breaker reset for funding transaction');
+      } catch (resetError) {
+        console.warn('⚠️ Could not reset circuit breaker:', resetError);
+      }
+      
+      // Set wallet address if not already set
+      if (!smartContractService.isWalletConnected()) {
+        smartContractService.setWalletAddress(connectedWallet);
+      }
+      
+      // Execute real blockchain funding transaction
+      const txHash = await smartContractService.fundShop({
+        shopId: parseInt(shop.id),
+        amount: fundingAmount,
+        purpose: fundingPurpose
+      });
+      
+      console.log('✅ Funding transaction successful:', txHash);
+      
+      // Call success handler with transaction hash
+      onFundingComplete(txHash);
+      setIsProcessing(false);
+      setFundingAmount(1000);
+      
+    } catch (error: any) {
+      console.error('❌ Funding transaction failed:', error);
+      setIsProcessing(false);
+      
+      let errorMessage = 'Unknown error occurred';
+      if (error.message?.includes('Wallet not connected')) {
+        errorMessage = 'Wallet not connected. Please connect your wallet and try again.';
+      } else if (error.message?.includes('Insufficient')) {
+        errorMessage = 'Insufficient GPS tokens. Please check your balance.';
+      } else if (error.message?.includes('fully funded')) {
+        errorMessage = 'This shop is already fully funded.';
+      } else if (error.message?.includes('Not registered')) {
+        errorMessage = 'You must register as an investor first.';
+      } else {
+        errorMessage = error.message || 'Funding transaction failed';
+      }
+      
+      alert(`❌ Funding Failed\n\nError: ${errorMessage}\n\nPlease check your wallet connection and try again.`);
+    }
   };
 
   const quickAmounts = [500, 1000, 2500, 5000].filter(amount => amount <= remainingFunding);
@@ -158,45 +210,40 @@ export const FundingModal: React.FC<FundingModalProps> = ({
               </div>
             </div>
 
+            {/* Funding Purpose */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Funding Purpose
+              </label>
+              <select
+                value={fundingPurpose}
+                onChange={(e) => setFundingPurpose(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              >
+                <option value="General business support">General business support</option>
+                <option value="Equipment purchase">Equipment purchase</option>
+                <option value="Inventory expansion">Inventory expansion</option>
+                <option value="Store renovation">Store renovation</option>
+                <option value="Marketing campaign">Marketing campaign</option>
+                <option value="Sustainability initiatives">Sustainability initiatives</option>
+              </select>
+            </div>
+
             {/* Payment Method */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Payment Method
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  onClick={() => setPaymentMethod('card')}
-                  className={`p-3 border rounded-lg text-center transition-colors ${
-                    paymentMethod === 'card'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <CreditCard className="w-5 h-5 mx-auto mb-1" />
-                  <span className="text-sm font-medium">Card</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('bank')}
-                  className={`p-3 border rounded-lg text-center transition-colors ${
-                    paymentMethod === 'bank'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <Target className="w-5 h-5 mx-auto mb-1" />
-                  <span className="text-sm font-medium">Bank</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('crypto')}
-                  className={`p-3 border rounded-lg text-center transition-colors ${
-                    paymentMethod === 'crypto'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <DollarSign className="w-5 h-5 mx-auto mb-1" />
-                  <span className="text-sm font-medium">Crypto</span>
-                </button>
+              <div className="p-4 border-2 border-emerald-500 bg-emerald-50 rounded-lg">
+                <div className="flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-emerald-600 mr-2" />
+                  <div className="text-center">
+                    <span className="text-lg font-medium text-emerald-700">Blockchain Payment</span>
+                    <p className="text-sm text-emerald-600 mt-1">
+                      Pay with GPS tokens on MASchain
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -379,7 +379,7 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
                     </p>
                   </div>
                   <button
-                    onClick={() => window.open(`${config.maschain.explorerUrl}/tx/${txHash}`, '_blank')}
+                    onClick={() => window.open(`${config.maschain.explorerUrl}/${txHash}`, '_blank')}
                     className="p-1 hover:bg-green-100 rounded transition-colors"
                     title="View on MASchain Explorer"
                   >
@@ -688,7 +688,7 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.8 }}
-                onClick={() => window.open(`${config.maschain.explorerUrl}/tx/${txHash}`, '_blank')}
+                onClick={() => window.open(`${config.maschain.explorerUrl}/${txHash}`, '_blank')}
                 className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" />
