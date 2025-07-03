@@ -1,4 +1,4 @@
-// GreenPOSNetworkEnhanced Contract ABI
+// GreenPOSNetworkFix Contract ABI - Updated for Fixed Contract
 export const CONTRACT_ABI = [
   {
     "inputs": [
@@ -22,6 +22,63 @@ export const CONTRACT_ABI = [
       },
       {
         "indexed": true,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FundsWithdrawn",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "InvestorRegistered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "shopId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "SaleRecorded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "shopId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "investor",
         "type": "address"
@@ -31,12 +88,6 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "purpose",
-        "type": "string"
       }
     ],
     "name": "ShopFunded",
@@ -62,74 +113,61 @@ export const CONTRACT_ABI = [
         "internalType": "string",
         "name": "name",
         "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "fundingNeeded",
-        "type": "uint256"
       }
     ],
     "name": "ShopRegistered",
     "type": "event"
   },
   {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      },
-      {
-        "internalType": "uint8",
-        "name": "_category",
-        "type": "uint8"
-      },
-      {
-        "internalType": "string",
-        "name": "_location",
-        "type": "string"
-      },
+    "inputs": [],
+    "name": "MAX_FUNDING",
+    "outputs": [
       {
         "internalType": "uint256",
-        "name": "_fundingNeeded",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "registerShop",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_FUNDING",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MIN_WITHDRAWAL",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      }
-    ],
-    "name": "registerInvestor",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "uint256",
-        "name": "_shopId",
+        "name": "shopId",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "_amount",
+        "name": "amount",
         "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_purpose",
-        "type": "string"
       }
     ],
     "name": "fundShop",
@@ -138,112 +176,49 @@ export const CONTRACT_ABI = [
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "getContractBalance",
+    "outputs": [
       {
         "internalType": "uint256",
-        "name": "_shopId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_amount",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "recordSale",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_shopId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_score",
+        "name": "shopId",
         "type": "uint256"
       }
     ],
-    "name": "updateSustainabilityScore",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_shopId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getShop",
+    "name": "getFundingHistory",
     "outputs": [
       {
         "components": [
           {
             "internalType": "address",
-            "name": "owner",
+            "name": "investor",
             "type": "address"
           },
           {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "enum GreenPOSNetworkEnhanced.ShopCategory",
-            "name": "category",
-            "type": "uint8"
-          },
-          {
-            "internalType": "string",
-            "name": "location",
-            "type": "string"
-          },
-          {
             "internalType": "uint256",
-            "name": "revenue",
+            "name": "amount",
             "type": "uint256"
           },
           {
             "internalType": "uint256",
-            "name": "fundingNeeded",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "totalFunded",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "sustainabilityScore",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bool",
-            "name": "isActive",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint256",
-            "name": "registeredAt",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "totalSales",
+            "name": "timestamp",
             "type": "uint256"
           }
         ],
-        "internalType": "struct GreenPOSNetworkEnhanced.Shop",
+        "internalType": "struct GreenPOSNetwork.FundingRecord[]",
         "name": "",
-        "type": "tuple"
+        "type": "tuple[]"
       }
     ],
     "stateMutability": "view",
@@ -253,48 +228,36 @@ export const CONTRACT_ABI = [
     "inputs": [
       {
         "internalType": "address",
-        "name": "_investor",
+        "name": "addr",
         "type": "address"
       }
     ],
     "name": "getInvestor",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "wallet",
-            "type": "address"
-          },
-          {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "totalInvested",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256[]",
-            "name": "fundedShops",
-            "type": "uint256[]"
-          },
-          {
-            "internalType": "bool",
-            "name": "isRegistered",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint256",
-            "name": "rewardsClaimed",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct GreenPOSNetworkEnhanced.Investor",
-        "name": "",
-        "type": "tuple"
+        "internalType": "address",
+        "name": "wallet",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalInvested",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "fundedShops",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "isRegistered",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -306,9 +269,238 @@ export const CONTRACT_ABI = [
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "totalShops",
         "type": "uint256"
       },
+      {
+        "internalType": "uint256",
+        "name": "activeShops",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFunding",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalInvestors",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "avgSustainability",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shopId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getShop",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "shopOwner",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "enum GreenPOSNetwork.ShopCategory",
+        "name": "category",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fundingNeeded",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalFunded",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "availableBalance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "sustainabilityScore",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isActive",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shopId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getShopBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "gpsToken",
+    "outputs": [
+      {
+        "internalType": "contract IGreenPOSToken",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "investors",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "wallet",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalInvested",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isRegistered",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shopId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "recordSale",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "registerInvestor",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "enum GreenPOSNetwork.ShopCategory",
+        "name": "category",
+        "type": "uint8"
+      },
+      {
+        "internalType": "string",
+        "name": "location",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fundingNeeded",
+        "type": "uint256"
+      }
+    ],
+    "name": "registerShop",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {
         "internalType": "uint256",
         "name": "",
@@ -318,15 +510,23 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "name": "shopFundings",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "investor",
+        "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "amount",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "timestamp",
         "type": "uint256"
       }
     ],
@@ -367,7 +567,7 @@ export const CONTRACT_ABI = [
         "type": "string"
       },
       {
-        "internalType": "enum GreenPOSNetworkEnhanced.ShopCategory",
+        "internalType": "enum GreenPOSNetwork.ShopCategory",
         "name": "category",
         "type": "uint8"
       },
@@ -378,17 +578,17 @@ export const CONTRACT_ABI = [
       },
       {
         "internalType": "uint256",
-        "name": "revenue",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
         "name": "fundingNeeded",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
         "name": "totalFunded",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "availableBalance",
         "type": "uint256"
       },
       {
@@ -403,55 +603,86 @@ export const CONTRACT_ABI = [
       },
       {
         "internalType": "uint256",
-        "name": "registeredAt",
+        "name": "totalWithdrawn",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalActiveShops",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalNetworkFunding",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalRegisteredInvestors",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shopId",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "totalSales",
+        "name": "score",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "name": "updateSustainabilityScore",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "registrationFee",
-    "outputs": [
+    "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "shopId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "contractActive",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
+    "name": "withdrawFunds",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ];
@@ -581,6 +812,30 @@ export const GPS_TOKEN_ABI = [
       }
     ],
     "name": "transferFrom",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "mint",
     "outputs": [
       {
         "internalType": "bool",

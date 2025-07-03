@@ -172,18 +172,40 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
         setLoading(true);
         setError(null);
 
-        // Use virtual shop mapping to get blockchain-compatible shop ID
+        // Determine if this is a real blockchain shop or a mock shop
         let shopId: number;
-        try {
-          shopId = virtualShopMapping.getBlockchainShopId(shop.id);
-          console.log('🔄 Virtual shop mapping success:', {
+        
+        // Check if shop.id is numeric (real blockchain shop) or string mock ID
+        if (typeof shop.id === 'number') {
+          // This is a real blockchain shop with numeric ID
+          shopId = shop.id;
+          console.log('🔄 Using real blockchain shop ID:', {
             originalShopId: shop.id,
-            mappedBlockchainId: shopId
+            blockchainShopId: shopId,
+            type: 'real_blockchain_shop'
           });
-        } catch (mappingError: any) {
-          console.error('❌ Virtual shop mapping failed:', mappingError);
-          setError(`Unable to process funding for shop ${shop.id}: ${mappingError.message}`);
-          return;
+        } else if (typeof shop.id === 'string' && /^\d+$/.test(shop.id)) {
+          // This is a numeric string - convert to number
+          shopId = parseInt(shop.id);
+          console.log('🔄 Converting string ID to number:', {
+            originalShopId: shop.id,
+            blockchainShopId: shopId,
+            type: 'numeric_string_converted'
+          });
+        } else {
+          // This is a mock shop that needs virtual mapping
+          try {
+            shopId = virtualShopMapping.getBlockchainShopId(shop.id);
+            console.log('🔄 Virtual shop mapping success:', {
+              originalShopId: shop.id,
+              mappedBlockchainId: shopId,
+              type: 'mock_shop_mapped'
+            });
+          } catch (mappingError: any) {
+            console.error('❌ Virtual shop mapping failed:', mappingError);
+            setError(`Unable to process funding for shop ${shop.id}: ${mappingError.message}`);
+            return;
+          }
         }
         
         const fundingAmount = parseFloat(amount);
@@ -294,8 +316,8 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
       // Provide more specific error messages
       if (error.message.includes('Service temporarily unavailable')) {
         setError('🔄 MASchain service is temporarily busy. Please try again in a few moments.');
-      } else if (error.message.includes('Insufficient GPS balance') || error.message.includes('Insufficient tokens')) {
-        setError(`Insufficient GPS tokens. ${error.message}`);
+      } else if (error.message.includes('Insufficient GPS balance') || error.message.includes('Insufficient tokens') || error.message.includes('revert Insufficient tokens')) {
+        setError(`❌ Insufficient GPS tokens for funding. Please mint more GPS tokens first using the "🪙 Mint 10k GPS" button in the dashboard, then try funding again.`);
       } else if (error.message.includes('Wallet not connected')) {
         setError('Wallet connection lost. Please reconnect your wallet and try again.');
       } else if (error.message.includes('fully funded')) {
@@ -786,6 +808,11 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.9 }}
                 onClick={() => {
+                  // Capture values before clearing state
+                  const currentTxHash = txHash || '';
+                  const currentFundingAmount = fundingAmount;
+                  
+                  // Clear modal state
                   setShowSuccessModal(false);
                   setTxHash(null);
                   setError(null);
@@ -795,14 +822,9 @@ export const SmartContractFundingModal: React.FC<SmartContractFundingModalProps>
                   // setAmount('');
                   // setPurpose('Stock');
                   
-                  // Refresh token info after funding
-                  smartContractService.getGPSTokenInfo().then(tokenInfo => {
-                    setGpsBalance(tokenInfo.balance);
-                    // Note: MASchain handles allowances automatically
-                  });
-                  
                   // Call onSuccess to handle post-funding logic in parent component
-                  onSuccess(txHash || '', fundingAmount);
+                  // This will trigger balance refresh in the parent component
+                  onSuccess(currentTxHash, currentFundingAmount);
                   
                   // Close the entire funding modal
                   handleClose();

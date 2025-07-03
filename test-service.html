@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartContract Service Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #fff; }
+        .log { margin: 5px 0; padding: 5px; background: #2d2d2d; border-radius: 3px; }
+        .error { background: #3d1a1a; color: #ff6b6b; }
+        .success { background: #1a3d1a; color: #6bff6b; }
+        .warning { background: #3d3d1a; color: #ffff6b; }
+    </style>
+</head>
+<body>
+    <h1>🧪 SmartContract Service Cache Test</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(div);
+            console.log(message);
+        }
+        
+        async function testSmartContractService() {
+            log('🚀 Starting SmartContract Service test...');
+            
+            try {
+                log('📦 Importing smartContractLite module...');
+                
+                // Add cache busting timestamp
+                const cacheBuster = Date.now();
+                const module = await import(`./src/services/smartContractLite.ts?v=${cacheBuster}`);
+                
+                log('✅ Module imported successfully', 'success');
+                log(`Available exports: ${Object.keys(module).join(', ')}`);
+                
+                if (module.smartContractService) {
+                    log('✅ smartContractService found', 'success');
+                    
+                    // Test version method
+                    try {
+                        const version = module.smartContractService.getVersion();
+                        log(`✅ Version: ${version}`, 'success');
+                        
+                        // Test basic methods
+                        const contractAddr = module.smartContractService.getContractAddress();
+                        log(`✅ Contract Address: ${contractAddr}`, 'success');
+                        
+                        const isConnected = module.smartContractService.isWalletConnected();
+                        log(`✅ Wallet Connected: ${isConnected}`, 'success');
+                        
+                        log('🎉 All tests passed! Service is working correctly.', 'success');
+                        
+                    } catch (methodError) {
+                        log(`❌ Method test failed: ${methodError.message}`, 'error');
+                    }
+                } else {
+                    log('❌ smartContractService not found in exports', 'error');
+                }
+                
+            } catch (importError) {
+                log(`❌ Import failed: ${importError.message}`, 'error');
+                log(`Error details: ${importError.stack}`, 'error');
+            }
+        }
+        
+        // Run the test
+        testSmartContractService();
+    </script>
+</body>
+</html>

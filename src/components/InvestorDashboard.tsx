@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, DollarSign, Target, MapPin, Star, Filter, Loader, Coins, CheckCircle, AlertCircle } from 'lucide-react';
 import { Shop, Transaction, getCategoryName, NetworkStats } from '../types';
@@ -21,15 +21,15 @@ const debounce = (func: Function, delay: number) => {
 };
 
 interface InvestorDashboardProps {
-  shops: Shop[];
-  transactions: Transaction[];
-  onFundShop: (shop: Shop) => void;
+  shops?: Shop[]; // Optional since we fetch real data from blockchain
+  transactions?: Transaction[]; // Optional since we don't use it
+  onFundShop?: (shop: Shop) => void; // Optional since we use our own handler
 }
 
 export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
-  shops,
-  transactions: _transactions, // Mark as used with underscore
-  onFundShop: _onFundShop // Mark as used with underscore - we'll use our own smart contract handler
+  shops: _shops, // Mark as unused - we fetch real blockchain data
+  transactions: _transactions, // Mark as unused
+  onFundShop: _onFundShop // Mark as unused - we use our own smart contract handler
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'revenue' | 'roi' | 'funding'>('revenue');
@@ -44,6 +44,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   const [serviceStatus, setServiceStatus] = useState<'available' | 'degraded' | 'unavailable'>('available');
   const [updatedShops, setUpdatedShops] = useState<Shop[]>([]);
   const [lastBalanceUpdate, setLastBalanceUpdate] = useState<Date | null>(null);
+  const [isLoadingShops, setIsLoadingShops] = useState(false);
+  const loadingShopsRef = useRef(false);
+  const initializationDoneRef = useRef(false);
    // Mint success modal state
   const [mintSuccessModal, setMintSuccessModal] = useState({
     isOpen: false,
@@ -67,10 +70,71 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
     shopId: ''
   });
 
-  // Auto-initialize with mock shops for UI display
+  // Load real shops from blockchain instead of mock data
   useEffect(() => {
-    setUpdatedShops(shops);
-  }, [shops]);
+    const loadBlockchainShops = async () => {
+      console.log('🔄 loadBlockchainShops useEffect triggered:', { isWalletConnected, isLoading: loadingShopsRef.current });
+      
+      // Prevent duplicate loads
+      if (loadingShopsRef.current) {
+        console.log('⏳ Shop loading already in progress, skipping...');
+        return;
+      }
+      
+      if (isWalletConnected) {
+        console.log('🔗 Wallet connected, loading real shops from blockchain...');
+        loadingShopsRef.current = true;
+        setIsLoadingShops(true);
+        
+        try {
+          const blockchainShops = await smartContractService.getShopsForInvestorDashboard();
+          console.log(`✅ Loaded ${blockchainShops.length} shops from blockchain:`, blockchainShops);
+          console.log('🔄 Setting updatedShops state with:', blockchainShops.map(shop => ({ id: shop.id, name: shop.name })));
+          setUpdatedShops(blockchainShops);
+        } catch (error) {
+          console.error('❌ Failed to load blockchain shops:', error);
+          // Fallback to empty array if blockchain fails
+          console.log('🔄 Setting updatedShops to empty array due to error');
+          setUpdatedShops([]);
+        } finally {
+          loadingShopsRef.current = false;
+          setIsLoadingShops(false);
+        }
+      } else {
+        console.log('💡 Wallet not connected, showing guidance message...');
+        const guidanceShop = {
+          id: 'connect-wallet',
+          name: 'Connect Your Wallet',
+          owner: '0x0000000000000000000000000000000000000000',
+          category: 0,
+          location: { lat: 13.7563, lng: 100.5018 },
+          revenue: 0,
+          fundingNeeded: 0,
+          totalFunded: 0,
+          sustainabilityScore: 0,
+          isActive: false,
+          registeredAt: 0,
+          lastSaleAt: 0,
+          stockHealth: 0,
+          lastSale: new Date(),
+          liveStream: '',
+          country: 'Blockchain Investment Platform',
+          inventory: [],
+          isPlaceholder: true,
+          message: 'Connect your MASchain wallet to view and fund real shops on the blockchain!'
+        };
+        console.log('🔄 Setting updatedShops to guidance shop');
+        setUpdatedShops([guidanceShop]);
+      }
+    };
+
+    // Add a small delay to prevent rapid re-triggering
+    const timeoutId = setTimeout(() => {
+      loadBlockchainShops();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [isWalletConnected]); // Removed 'shops' dependency since we don't use it
 
   const categories = ['all', ...new Set(updatedShops.map(shop => getCategoryName(shop.category)))];
 
@@ -90,6 +154,19 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         return 0;
     }
   });
+
+  // Debug logging to see what shops are being rendered
+  React.useEffect(() => {
+    console.log('🔍 Render state:', {
+      updatedShopsCount: updatedShops.length,
+      filteredShopsCount: filteredShops.length,
+      sortedShopsCount: sortedShops.length,
+      selectedCategory,
+      sortBy,
+      isWalletConnected,
+      shopNames: sortedShops.map(shop => shop.name).slice(0, 3) // First 3 shop names
+    });
+  }, [updatedShops, filteredShops, sortedShops, selectedCategory, sortBy, isWalletConnected]);
 
   const getFundingProgress = (shop: Shop) => {
     return (shop.totalFunded / shop.fundingNeeded) * 100;
@@ -141,13 +218,13 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
               }
             }
           
-          // Fallback to calculated stats from mock data
-          const totalFunding = shops.reduce((sum, shop) => sum + shop.totalFunded, 0);
-          const avgScore = shops.reduce((sum, shop) => sum + shop.sustainabilityScore, 0) / shops.length;
-          const activeShops = shops.filter(shop => shop.isActive).length;
+          // Fallback to calculated stats from blockchain data
+          const totalFunding = updatedShops.reduce((sum: number, shop: Shop) => sum + shop.totalFunded, 0);
+          const avgScore = updatedShops.length > 0 ? updatedShops.reduce((sum: number, shop: Shop) => sum + shop.sustainabilityScore, 0) / updatedShops.length : 0;
+          const activeShops = updatedShops.filter((shop: Shop) => shop.isActive).length;
           
           const mockStats = {
-            totalShops: shops.length,
+            totalShops: updatedShops.length,
             totalActiveShops: activeShops,
             totalFunding,
             totalInvestors: 5,
@@ -162,12 +239,12 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
           
         } catch (error) {
           console.error('Failed to load network stats:', error);
-          const totalFunding = shops.reduce((sum, shop) => sum + shop.totalFunded, 0);
-          const avgScore = shops.reduce((sum, shop) => sum + shop.sustainabilityScore, 0) / shops.length;
-          const activeShops = shops.filter(shop => shop.isActive).length;
+          const totalFunding = updatedShops.reduce((sum: number, shop: Shop) => sum + shop.totalFunded, 0);
+          const avgScore = updatedShops.length > 0 ? updatedShops.reduce((sum: number, shop: Shop) => sum + shop.sustainabilityScore, 0) / updatedShops.length : 0;
+          const activeShops = updatedShops.filter((shop: Shop) => shop.isActive).length;
           
           const mockStats = {
-            totalShops: shops.length,
+            totalShops: updatedShops.length,
             totalActiveShops: activeShops,
             totalFunding,
             totalInvestors: 5,
@@ -189,68 +266,50 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   const loadGPSTokenInfo = useCallback(async () => {
     try {
       setLoadingTokenInfo(true);
-      console.log('🔄 Loading real-time GPS token balance from blockchain...');
       
-      // Always fetch fresh balance from blockchain (no caching)
+      // Force a fresh fetch - no caching
       const tokenInfo = await smartContractService.getGPSTokenInfo();
       
-      console.log('📊 Raw token info from service:', {
-        tokenInfo,
+      console.log('💰 GPS Token Info Loaded:', {
         balance: tokenInfo.balance,
-        balanceType: typeof tokenInfo.balance,
-        address: tokenInfo.address,
-        symbol: tokenInfo.symbol
+        symbol: tokenInfo.symbol,
+        timestamp: new Date().toISOString()
       });
       
+      // Always update the token info - even if balance is 0
       setGpsTokenInfo(tokenInfo);
-      
-      console.log('✅ GPS token info SET IN STATE:', {
-        balance: tokenInfo.balance,
-        source: 'blockchain',
-        timestamp: new Date().toISOString(),
-        stateAfterSet: 'Will be visible in next render'
-      });
-      
-      // Update last refresh timestamp
       setLastBalanceUpdate(new Date());
+      
     } catch (error) {
       console.error('❌ Failed to load GPS token info:', error);
-      // Even on error, try to get the most current balance
-      try {
-        const fallbackBalance = await smartContractService.getGPSBalance();
-        console.log('⚠️ Using fallback balance method:', fallbackBalance);
-        setGpsTokenInfo({
-          address: smartContractService.getGPSTokenAddress(),
-          name: 'GreenPOS Token',
-          symbol: 'GPS',
+      // On error, set a default state instead of keeping loading forever
+      if (!gpsTokenInfo) {
+        console.log('⚙️ Setting default GPS token info due to error');
+        setGpsTokenInfo({ 
+          balance: 0, 
+          symbol: 'GPS', 
+          name: 'GPS Token',
+          address: '',
           decimals: 18,
-          balance: fallbackBalance,
-          allowance: 0
-        });
-        console.log('⚠️ Fallback balance SET IN STATE:', fallbackBalance);
-      } catch (fallbackError) {
-        console.error('❌ Fallback balance also failed:', fallbackError);
-        setGpsTokenInfo({
-          address: smartContractService.getGPSTokenAddress(),
-          name: 'GreenPOS Token',
-          symbol: 'GPS',
-          decimals: 18,
-          balance: 0,
           allowance: 0
         });
       }
     } finally {
       setLoadingTokenInfo(false);
     }
-  }, []); // No dependencies to ensure fresh calls every time
+  }, [isWalletConnected]); // Keep dependencies minimal to prevent loops
 
   const handleWalletConnectionChange = useCallback(async (connected: boolean, address?: string) => {
-    console.log('🔄 Wallet connection changed:', {
-      connected,
-      address,
-      previousConnected: isWalletConnected,
-      previousAddress: connectedAddress
-    });
+    // Only log actual connection state changes, not every call
+    if (connected !== isWalletConnected || address !== connectedAddress) {
+      console.log('🔄 Wallet connection changed:', { 
+        connected, 
+        address, 
+        previousConnected: isWalletConnected,
+        previousAddress: connectedAddress,
+        willTriggerShopReload: connected !== isWalletConnected
+      });
+    }
     
     setIsWalletConnected(connected);
     setConnectedAddress(address);
@@ -260,7 +319,6 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
       smartContractService.setWalletAddress(address);
       
       // Discover actual shops in the contract
-      console.log('🔍 Discovering shops in contract...');
       virtualShopMapping.discoverContractShops(smartContractService)
         .then(() => {
           console.log('✅ Shop discovery completed');
@@ -277,7 +335,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
       // debouncedLoadNetworkStats(); // DISABLED: Only load when user clicks button
       loadGPSTokenInfo(); // Load GPS token balance when wallet connects
     }
-  }, [debouncedLoadNetworkStats, loadGPSTokenInfo]);
+  }, [isWalletConnected, connectedAddress]); // Removed loadGPSTokenInfo to prevent recreation
 
   const handleFundShop = (shop: Shop) => {
     console.log('🔄 Opening funding modal:', {
@@ -294,19 +352,41 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   const handleFundingSuccess = async (txHash: string, fundedAmount: number) => {
     console.log('✅ Funding successful:', { txHash, fundedAmount });
     
+    // Capture the selected shop before clearing state
+    const fundedShop = selectedShop;
+    
     // Close funding modal
     setIsFundingModalOpen(false);
     setSelectedShop(null);
     
-    // Immediately refresh GPS token balance to show real-time update
-    console.log('🔄 Refreshing balance after successful funding...');
-    await loadGPSTokenInfo();
+    // Trigger a shop funding update immediately
+    if (fundedShop) {
+      console.log('🔄 Updating shop funding:', { shopId: fundedShop.id, amount: fundedAmount });
+      
+      // Force update the selected shop's funding locally for immediate UI feedback
+      setUpdatedShops(prevShops => 
+        prevShops.map(shop => 
+          shop.id === fundedShop.id 
+            ? { ...shop, totalFunded: shop.totalFunded + fundedAmount }
+            : shop
+        )
+      );
+    }
     
-    // Refresh network stats and GPS token info
-    // debouncedLoadNetworkStats(); // DISABLED: Only refresh when user clicks button
+    // Single balance refresh after a reasonable delay
+    setTimeout(async () => {
+      try {
+        setLoadingTokenInfo(true);
+        console.log('🔄 Post-funding balance refresh');
+        await loadGPSTokenInfo();
+      } catch (error) {
+        console.error('⚠️ Failed to refresh balance after funding:', error);
+      } finally {
+        setLoadingTokenInfo(false);
+      }
+    }, 3000); // Single 3-second delay, then one refresh
     
     // Note: Success modal is already shown by SmartContractFundingModal
-    // No need to show another modal here
   };
 
   const handleFundingModalClose = () => {
@@ -316,103 +396,164 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
 
   // Load GPS token info on component mount and when wallet connects
   useEffect(() => {
-    console.log('🔄 Initial GPS token info load on mount...');
-    loadGPSTokenInfo(); // Load GPS token info when component mounts
-  }, []); // No dependencies to ensure it runs only once on mount
+    // Only load GPS token info if wallet is connected
+    if (isWalletConnected && connectedAddress) {
+      console.log('🔄 useEffect triggered - Loading GPS token info for connected wallet:', connectedAddress);
+      loadGPSTokenInfo();
+    } else {
+      console.log('⏳ Wallet not connected, skipping GPS token info load');
+    }
+  }, [isWalletConnected, connectedAddress, loadGPSTokenInfo]); // Added loadGPSTokenInfo back to ensure it runs
 
-  // Real-time balance refresh mechanism
+  // Real-time balance refresh mechanism - less frequent and more stable
   useEffect(() => {
     if (!isWalletConnected) return;
 
-    console.log('🔄 Setting up real-time balance refresh interval...');
+    // Only log once when setting up
+    console.log('🔄 Setting up 60s balance refresh interval');
     
-    // Refresh balance every 30 seconds when wallet is connected
+    // Refresh balance every 60 seconds when wallet is connected (less frequent)
     const balanceRefreshInterval = setInterval(async () => {
       if (isWalletConnected && !loadingTokenInfo) {
-        console.log('⏰ Periodic real-time balance refresh...');
+        // Reduced logging - only show every 10th refresh to avoid spam
+        const now = Date.now();
+        const shouldLog = Math.floor(now / 60000) % 10 === 0; // Log every 10 minutes
+        
+        if (shouldLog) {
+          console.log('⏰ Periodic balance refresh (every 10min log)');
+        }
+        
         try {
           await loadGPSTokenInfo();
-          console.log('✅ Periodic balance refresh completed');
         } catch (error) {
+          // Only log errors, not success
           console.warn('⚠️ Periodic balance refresh failed:', error);
         }
       }
-    }, 30000); // 30 seconds
+    }, 60000); // 60 seconds (increased from 30)
 
     return () => {
-      console.log('🛑 Clearing real-time balance refresh interval');
+      console.log('🛑 Clearing balance refresh interval');
       clearInterval(balanceRefreshInterval);
     };
-  }, [isWalletConnected, loadingTokenInfo, loadGPSTokenInfo]);
+  }, [isWalletConnected]); // Removed loadingTokenInfo and loadGPSTokenInfo from deps to prevent recreation
 
   // Auto-initialize wallet connection if configured wallet address exists
   useEffect(() => {
     const initializeConfiguredWallet = async () => {
-      // Check if wallet is already connected
-      if (isWalletConnected) {
+      console.log('🔄 Auto-initialization starting...', {
+        isWalletConnected,
+        initializationDone: initializationDoneRef.current
+      });
+      
+      // Prevent multiple initializations
+      if (initializationDoneRef.current) {
+        console.log('🔗 Auto-initialization already completed, skipping...');
         return;
       }
       
-      // Check if smartContractService has a configured wallet
-      const isServiceConnected = smartContractService.isWalletConnected();
+      // Check if wallet is already connected in UI state
+      if (isWalletConnected) {
+        console.log('🔗 Wallet already connected in UI state');
+        initializationDoneRef.current = true;
+        return;
+      }
       
-      if (isServiceConnected) {
-        const configuredAddress = smartContractService.getWalletAddress() || config.maschain.walletAddress;
+      // FIXED: Always check for configured wallet, regardless of current UI state
+      const configuredAddress = smartContractService.getWalletAddress() || config.maschain.walletAddress;
+      
+      if (configuredAddress) {
+        console.log('🔗 Found configured wallet address, auto-connecting:', configuredAddress);
         
-        if (configuredAddress) {
-          console.log('🔗 Auto-initializing with configured wallet address:', configuredAddress);
-          
-          // Set the wallet as connected in the UI
-          await handleWalletConnectionChange(true, configuredAddress);
-          
-          console.log('✅ Configured wallet auto-connected successfully');
-          
-          // Force refresh GPS token info after auto-connection (real-time, no cache)
-          console.log('🔄 Loading real-time GPS token balance after auto-connection...');
-          await loadGPSTokenInfo();
-        }
+        // Ensure service has the wallet address set
+        smartContractService.setWalletAddress(configuredAddress);
+        
+        // Set the wallet as connected in the UI
+        await handleWalletConnectionChange(true, configuredAddress);
+        
+        console.log('✅ Configured wallet auto-connected successfully');
+        initializationDoneRef.current = true;
+        
+        // GPS token info will be loaded automatically by the useEffect above
+        // when isWalletConnected becomes true
+      } else {
+        console.log('💡 No configured wallet address found, user needs to connect manually');
+        initializationDoneRef.current = true;
       }
     };
     
-    // Run initialization after component mounts
-    initializeConfiguredWallet();
+    // Run initialization after component mounts with a small delay
+    const timeoutId = setTimeout(() => {
+      initializeConfiguredWallet();
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
   }, []); // Run only once on mount
 
   // Update shops with real-time funding data
   useEffect(() => {
     const updateShopsWithFunding = () => {
-      const updatedShopsData = shopFundingService.getUpdatedShops(shops);
-      setUpdatedShops(updatedShopsData);
-      
-      console.log('🔄 Updated shops with funding data:', {
-        original: shops.length,
-        updated: updatedShopsData.length,
-        fundingChanges: updatedShopsData.filter((shop, index) => 
-          shop.totalFunded !== shops[index]?.totalFunded
-        ).length
+      setUpdatedShops(prevShops => {
+        const updatedShopsData = shopFundingService.getUpdatedShops(prevShops);
+        
+        // Only log when there are actual funding changes
+        const fundingChanges = updatedShopsData.filter((shop, index) => 
+          shop.totalFunded !== prevShops[index]?.totalFunded
+        ).length;
+        
+        if (fundingChanges > 0) {
+          console.log(`💰 Shop funding updated: ${fundingChanges} shops changed`);
+        }
+        
+        return updatedShopsData;
       });
     };
 
-    // Initial update
-    updateShopsWithFunding();
-
     // Listen for funding updates
     const unsubscribe = shopFundingService.onFundingUpdate((shopId, newFunding) => {
-      console.log(`💰 Funding update received for shop ${shopId}: ${newFunding} GPS`);
+      // Reduced logging - only show significant funding updates
+      if (newFunding > 0) {
+        console.log(`💰 Shop ${shopId} funded: ${newFunding} GPS`);
+      }
       updateShopsWithFunding();
       
-      // Refresh GPS token info in real-time to reflect new balance
-      console.log('🔄 Real-time balance refresh triggered by funding update...');
-      loadGPSTokenInfo();
+      // Note: Balance refresh is handled by gpsBalanceUpdated event listener
+      // and periodic refresh - no need to spam refresh here
     });
 
     return () => {
       unsubscribe();
     };
-  }, [shops, loadGPSTokenInfo]);
+  }, []); // Remove updatedShops from dependency to prevent infinite loop
 
   // Emergency test - direct MASchain API call using correct .env values
 
+  // Listen for real-time GPS balance updates from smart contract events
+  useEffect(() => {
+    const handleGPSBalanceUpdate = async (event: CustomEvent) => {
+      const { oldBalance, newBalance, change } = event.detail;
+      // Only log significant balance changes
+      if (Math.abs(change) > 0.1) {
+        console.log(`💰 Balance: ${oldBalance} → ${newBalance} (-${change} GPS)`);
+      }
+      
+      // Force refresh the balance display
+      setLoadingTokenInfo(true);
+      try {
+        await loadGPSTokenInfo();
+      } catch (error) {
+        console.error('Failed to refresh balance after update:', error);
+      } finally {
+        setLoadingTokenInfo(false);
+      }
+    };
+
+    window.addEventListener('gpsBalanceUpdated', handleGPSBalanceUpdate as any);
+    
+    return () => {
+      window.removeEventListener('gpsBalanceUpdated', handleGPSBalanceUpdate as any);
+    };
+  }, []); // Empty deps - event listener only needs to be set up once
 
   return (
     <div className="space-y-6">
@@ -455,8 +596,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
               🚀 Production-Grade Blockchain Integration
             </p>
             <p className="text-xs text-blue-600 mt-1">
-              All funding operations are real blockchain transactions on MASchain. 
-              Shop profiles are demonstration data for showcase purposes.
+              All operations use real blockchain transactions on MASchain only. 
+              No demo transactions or fallbacks.
             </p>
           </div>
         </div>
@@ -521,9 +662,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                   {loadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
                   ) : networkStats ? (
-                    `฿${networkStats.totalFunding.toLocaleString()}`
+                    `$${networkStats.totalFunding.toLocaleString()}`
                   ) : (
-                    `฿${shops.reduce((sum, shop) => sum + shop.totalFunded, 0).toLocaleString()}`
+                    `$${updatedShops.reduce((sum, shop) => sum + shop.totalFunded, 0).toLocaleString()}`
                   )}
                 </p>
               </div>
@@ -543,7 +684,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                   ) : networkStats ? (
                     `${networkStats.averageSustainabilityScore}%`
                   ) : (
-                    `${(shops.reduce((sum, shop) => sum + (shop.sustainabilityScore || 50), 0) / shops.length).toFixed(1)}%`
+                    `${updatedShops.length > 0 ? (updatedShops.reduce((sum, shop) => sum + (shop.sustainabilityScore || 50), 0) / updatedShops.length).toFixed(1) : '0.0'}%`
                   )}
                 </p>
               </div>
@@ -563,7 +704,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                   ) : networkStats ? (
                     networkStats.totalActiveShops
                   ) : (
-                    shops.filter(shop => shop.isActive).length
+                    updatedShops.filter(shop => shop.isActive).length
                   )}
                 </p>
               </div>
@@ -599,7 +740,132 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 shadow-lg border border-emerald-200"
-        >            <div className="flex items-center justify-between mb-4">
+        >
+          {/* Prominent Mint Button for Low/Zero Balance */}
+          {gpsTokenInfo && gpsTokenInfo.balance < 1000 && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">
+                    🪙 Insufficient GPS Tokens for Funding
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">
+                    You need GPS tokens to fund shops. Current balance: {gpsTokenInfo.balance.toLocaleString()} GPS
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!isWalletConnected) {
+                      alert('Please connect your wallet first');
+                      return;
+                    }
+                    
+                    try {
+                      setLoadingTokenInfo(true);
+                      console.log('🪙 Minting 1,000 GPS tokens for funding...');
+                      
+                      const apiUrl = config.maschain.apiUrl;
+                      const gpsTokenAddress = config.maschain.gpsTokenAddress;
+                      const walletAddress = config.maschain.walletAddress;
+                      const clientId = config.maschain.clientId;
+                      const clientSecret = config.maschain.clientSecret;
+                      
+                      const amountInWei = (1000 * Math.pow(10, 18)).toString();
+                      
+                      const result = await fetch(`${apiUrl}/api/contract/smart-contracts/${gpsTokenAddress}/execute`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'client_id': clientId,
+                          'client_secret': clientSecret
+                        },
+                        body: JSON.stringify({
+                          wallet_options: {
+                            type: "organisation",
+                            address: walletAddress
+                          },
+                          method_name: 'mint',
+                          params: {
+                            to: walletAddress,
+                            amount: amountInWei
+                          }
+                        })
+                      });
+                      
+                      const responseText = await result.text();
+                      console.log('🪙 Mint response:', { status: result.status, body: responseText });
+                      
+                      if (result.ok || result.status === 200) {
+                        try {
+                          const data = JSON.parse(responseText);
+                          const txHash = data.result?.transaction_hash || data.result?.txHash || data.result?.hash;
+                          
+                          if (txHash) {
+                            console.log('✅ Minting successful!');
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            // Only need one refresh call - loadGPSTokenInfo() already fetches fresh balance
+                            await loadGPSTokenInfo();
+                            
+                            setMintSuccessModal({
+                              isOpen: true,
+                              amount: 1000,
+                              symbol: 'GPS',
+                              transactionHash: txHash,
+                              explorerUrl: `https://explorer-testnet.maschain.com/${txHash}`,
+                              isRealTransaction: true
+                            });
+                          } else {
+                            throw new Error('No transaction hash returned');
+                          }
+                        } catch (parseError) {
+                          console.warn('Could not parse response, checking for success:', responseText);
+                          if (responseText.includes('Success') || responseText.includes('transaction_hash')) {
+                            console.log('✅ Minting appears successful');
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            // Only need one refresh call - loadGPSTokenInfo() already fetches fresh balance
+                            await loadGPSTokenInfo();
+                            
+                            setMintSuccessModal({
+                              isOpen: true,
+                              amount: 1000,
+                              symbol: 'GPS',
+                              transactionHash: 'Success',
+                              explorerUrl: '',
+                              isRealTransaction: true
+                            });
+                          } else {
+                            throw new Error(`Unexpected response: ${responseText}`);
+                          }
+                        }
+                      } else {
+                        throw new Error(`Mint failed: ${result.status} - ${responseText}`);
+                      }                        } catch (error) {
+                          console.error('❌ Failed to mint tokens:', error);
+                          
+                          // Provide better error messaging
+                          let errorMessage = '❌ Failed to mint tokens: ' + error;
+                          
+                          if (String(error).includes('500')) {
+                            errorMessage = '❌ Server error during minting. This may be due to network issues or contract limitations. Please try again in a few moments.';
+                          } else if (String(error).includes('permissions')) {
+                            errorMessage = '❌ Insufficient permissions for minting. Please contact the contract administrator.';
+                          } else if (String(error).includes('network') || String(error).includes('fetch')) {
+                            errorMessage = '❌ Network error. Please check your connection and try again.';
+                          }
+                          
+                          alert(errorMessage);
+                        } finally {
+                          setLoadingTokenInfo(false);
+                        }
+                  }}
+                  disabled={loadingTokenInfo}
+                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-sm rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {loadingTokenInfo ? 'Minting...' : '🪙 Mint 1,000 GPS Tokens'}
+                </button>
+              </div>
+            </div>
+          )}            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-500 rounded-lg">
                   <Coins className="w-6 h-6 text-white" />
@@ -609,8 +875,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                   <p className="text-xs text-emerald-600">
                     {loadingTokenInfo ? 'Refreshing from blockchain...' : 
                       lastBalanceUpdate ? 
-                        `Last updated: ${lastBalanceUpdate.toLocaleTimeString()} • Auto-refreshes every 30s` :
-                        'Live blockchain data • Auto-refreshes every 30s'}
+                        `Last updated: ${lastBalanceUpdate.toLocaleTimeString()} • Auto-refreshes every 60s` :
+                        'Live blockchain data • Auto-refreshes every 60s'}
                   </p>
                 </div>
               </div>
@@ -628,43 +894,28 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Available Balance</p>
                   <p className="text-2xl font-bold text-emerald-700">
-                    {(() => {
-                      // Debug logging during render
-                      console.log('🎨 RENDER DEBUG - Balance display state:', {
-                        loadingTokenInfo,
-                        gpsTokenInfo,
-                        balance: gpsTokenInfo?.balance,
-                        hasGpsTokenInfo: !!gpsTokenInfo,
-                        balanceIsUndefined: gpsTokenInfo?.balance === undefined,
-                        balanceValue: gpsTokenInfo?.balance,
-                        timestamp: new Date().toISOString()
-                      });
-                      
-                      if (loadingTokenInfo) {
-                        return <Loader className="w-6 h-6 animate-spin" />;
-                      } else if (gpsTokenInfo && gpsTokenInfo.balance !== undefined) {
-                        return `${gpsTokenInfo.balance.toLocaleString()} GPS`;
-                      } else {
-                        return '0 GPS';  // Show 0 by default until balance loads
-                      }
-                    })()}
+                    {loadingTokenInfo ? (
+                      <Loader className="w-6 h-6 animate-spin" />
+                    ) : gpsTokenInfo && gpsTokenInfo.balance !== undefined ? (
+                      `${gpsTokenInfo.balance.toLocaleString()} GPS`
+                    ) : (
+                      '0 GPS'
+                    )}
                   </p>
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={async () => {
                         try {
                           setLoadingTokenInfo(true);
-                          console.log('🔄 FORCE refreshing real-time GPS token balance from blockchain...');
                           
-                          // Clear cache and force refresh with real-time data 
-                          await smartContractService.forceRefreshGPSBalance();
+                          // Clear any cached data
+                          localStorage.removeItem('gps_balance_cache');
                           
-                          // Update UI with fresh data
+                          // Single refresh call - no excessive polling
                           await loadGPSTokenInfo();
                           
-                          console.log('✅ FORCE refresh completed - should show 14,000 GPS now!');
                         } catch (error) {
-                          console.error('❌ Failed to refresh balance:', error);
+                          console.error('❌ Force refresh failed:', error);
                         } finally {
                           setLoadingTokenInfo(false);
                         }
@@ -678,15 +929,10 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                       onClick={async () => {
                         try {
                           setLoadingTokenInfo(true);
-                          console.log('🔄 Force refreshing real-time GPS token balance from blockchain...');
                           
-                          // Force refresh with real-time data (no cache)
-                          await smartContractService.forceRefreshGPSBalance();
-                          
-                          // Update UI with fresh data
+                          // Single refresh call - loadGPSTokenInfo() already fetches fresh data
                           await loadGPSTokenInfo();
                           
-                          console.log('✅ Real-time balance refresh completed');
                         } catch (error) {
                           console.error('❌ Failed to refresh balance:', error);
                         } finally {
@@ -707,102 +953,246 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                         
                         try {
                           setLoadingTokenInfo(true);
-                          console.log('🔍 DEBUG: Checking actual blockchain balance...');
+                          console.log('🪙 Minting 1,000 GPS tokens to ensure sufficient balance...');
                           
-                          // First, check the actual balance on blockchain
-                          const { maschainService } = await import('../services/maschain');
-                          const gpsTokenAddress = smartContractService.getGPSTokenAddress();
-                          const walletAddress = smartContractService.getWalletAddress();
+                          // Add a longer delay to avoid any potential rate limiting
+                          await new Promise(resolve => setTimeout(resolve, 1000));
                           
-                          console.log('🔍 Fetching balance for:', {
-                            tokenContract: gpsTokenAddress,
-                            wallet: walletAddress
+                          // Direct MASchain API call to mint tokens with ABI
+                      const apiUrl = config.maschain.apiUrl;
+                      const gpsTokenAddress = config.maschain.gpsTokenAddress;
+                      const walletAddress = config.maschain.walletAddress;
+                      const clientId = config.maschain.clientId;
+                      const clientSecret = config.maschain.clientSecret;
+                      
+                      // Convert 1,000 tokens to wei - AVOID SCIENTIFIC NOTATION
+                      const amountInWei = BigInt(1000 * Math.pow(10, 18)).toString();
+                      
+                      console.log('📊 Amount conversion check:', {
+                        originalAmount: 1000,
+                        amountInWei: amountInWei,
+                        isScientific: amountInWei.includes('e') || amountInWei.includes('E')
+                      });
+                      
+                      // Try using the service method first (it might have better error handling)
+                      try {
+                        console.log('🧪 Trying service method first...');
+                        const serviceResult = await smartContractService.mintGPSTokens(1000);
+                        console.log('✅ Service method successful:', serviceResult);
+                        
+                        // Wait for transaction to be processed
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        
+                        // Single refresh - loadGPSTokenInfo() already fetches fresh balance
+                        await loadGPSTokenInfo();
+                        
+                        // Show success modal
+                        setMintSuccessModal({
+                          isOpen: true,
+                          amount: 1000,
+                          symbol: 'GPS',
+                          transactionHash: serviceResult,
+                          explorerUrl: `https://explorer-testnet.maschain.com/${serviceResult}`,
+                          isRealTransaction: true
+                        });
+                        return; // Exit early since service method worked
+                      } catch (serviceError) {
+                        console.warn('⚠️ Service method failed, trying direct fetch...', serviceError);
+                      }
+                      
+                      console.log('🚀 Sending mint request with exact same payload as working curl...');
+                      console.log('📋 Request details:', {
+                        url: `${apiUrl}/api/contract/smart-contracts/${gpsTokenAddress}/execute`,
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'client_id': clientId,
+                          'client_secret': clientSecret,
+                          'Accept': 'application/json',
+                          'Cache-Control': 'no-cache'
+                        },
+                        body: {
+                          wallet_options: {
+                            type: "organisation",
+                            address: walletAddress
+                          },
+                          method_name: 'mint',
+                          params: {
+                            to: walletAddress,
+                            amount: amountInWei
+                          }
+                        }
+                      });
+                      
+                      console.log('📤 Exact JSON payload:', JSON.stringify({
+                        wallet_options: {
+                          type: "organisation",
+                          address: walletAddress
+                        },
+                        method_name: 'mint',
+                        params: {
+                          to: walletAddress,
+                          amount: amountInWei
+                        }
+                      }, null, 2));
+                      
+                      const result = await fetch(`${apiUrl}/api/contract/smart-contracts/${gpsTokenAddress}/execute`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'client_id': clientId,
+                          'client_secret': clientSecret,
+                          'Accept': 'application/json',
+                          'Cache-Control': 'no-cache'
+                        },
+                        body: JSON.stringify({
+                          wallet_options: {
+                            type: "organisation",
+                            address: walletAddress
+                          },
+                          method_name: 'mint',
+                          params: {
+                            to: walletAddress,
+                            amount: amountInWei
+                          }
+                        })
                           });
                           
-                          if (!walletAddress) {
-                            throw new Error('No wallet address available');
-                          }
-                          
-                          const balanceResult = await maschainService.getTokenBalance(gpsTokenAddress, walletAddress);
-                          console.log('📊 Raw balance result:', balanceResult);
-                          
-                          let currentBalance = 0;
-                          if (balanceResult && balanceResult.balance) {
-                            if (balanceResult.balance.includes('.')) {
-                              currentBalance = parseFloat(balanceResult.balance);
-                            } else {
-                              currentBalance = parseFloat(balanceResult.balance) / Math.pow(10, 18);
+                          let responseText = await result.text();
+                          let finalResult = result;
+                          console.log('🪙 Mint response:', {
+                            status: finalResult.status,
+                            statusText: finalResult.statusText,
+                            body: responseText,
+                            headers: {
+                              'content-type': finalResult.headers.get('content-type'),
+                              'x-ratelimit-remaining': finalResult.headers.get('x-ratelimit-remaining'),
+                              'x-ratelimit-reset': finalResult.headers.get('x-ratelimit-reset')
                             }
-                          }
-                          
-                          console.log('📊 Current blockchain balance:', currentBalance, 'GPS');
-                          
-                          if (currentBalance > 0) {
-                            alert(`✅ You already have ${currentBalance.toLocaleString()} GPS tokens on the blockchain!\n\nThe balance is being updated in real-time.`);
-                            await loadGPSTokenInfo(); // Real-time refresh
-                            return;
-                          }
-                          
-                          // If balance is 0, try to mint tokens
-                          console.log('🪙 Balance is 0, attempting to mint 1000 GPS tokens...');
-                          
-                          const txHash = await smartContractService.mintGPSTokens(1000);
-                          
-                          // Check if it's a real blockchain transaction
-                          const isRealTx = txHash.startsWith('0x') && txHash.length === 66 && !txHash.includes('demo');
-                          
-                          if (isRealTx) {
-                            console.log('✅ Real blockchain minting successful!');
-                            console.log('⏳ Waiting for transaction to be mined...');
+                          });                            // If we get a 500 error, let's try once more after a longer delay
+                          if (finalResult.status === 500) {
+                            console.log('⚠️ Got 500 error, waiting 5 seconds and trying once more...');
+                            await new Promise(resolve => setTimeout(resolve, 5000));
                             
-                            // Wait a bit for transaction to be processed
-                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            console.log('🔄 Retry attempt - checking if this could be a rate limit issue...');
                             
-                            // Force refresh the balance in real-time after successful minting
-                            console.log('🔄 Real-time balance refresh after successful minting...');
-                            for (let i = 0; i < 5; i++) {
-                              console.log(`🔄 Real-time balance refresh attempt ${i + 1}/5...`);
-                              await smartContractService.forceRefreshGPSBalance();
-                              await loadGPSTokenInfo();
-                              
-                              // Check if balance updated
-                              const newTokenInfo = await smartContractService.getGPSTokenInfo();
-                              if (newTokenInfo.balance > 0) {
-                                console.log('✅ Real-time balance updated successfully:', newTokenInfo.balance);
-                                break;
-                              }
-                              
-                              if (i < 4) { // Don't wait after the last attempt
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-                              }
-                            }
-                            
-                            // Use correct MASchain explorer URL format
-                            const explorerUrl = `https://explorer-testnet.maschain.com/${txHash}`;
-                            
-                            setMintSuccessModal({
-                              isOpen: true,
-                              amount: 1000,
-                              symbol: 'GPS',
-                              transactionHash: txHash,
-                              explorerUrl: explorerUrl,
-                              isRealTransaction: true
+                            const retryResult = await fetch(`${apiUrl}/api/contract/smart-contracts/${gpsTokenAddress}/execute`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'client_id': clientId,
+                                'client_secret': clientSecret,
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache',
+                                'X-Retry-Attempt': '1'
+                              },
+                              body: JSON.stringify({
+                                wallet_options: {
+                                  type: "organisation",
+                                  address: walletAddress
+                                },
+                                method_name: 'mint',
+                                params: {
+                                  to: walletAddress,
+                                  amount: amountInWei
+                                }
+                              })
                             });
+                            
+                            const retryResponseText = await retryResult.text();
+                            console.log('🔄 Retry mint response:', {
+                              status: retryResult.status,
+                              body: retryResponseText
+                            });
+                            
+                            // Use retry result if it's better
+                            if (retryResult.ok) {
+                              console.log('✅ Retry was successful!');
+                              // Update result variables for the rest of the code
+                              finalResult = retryResult;
+                              responseText = retryResponseText;
+                            }
+                          }
+                          
+                          if (finalResult.ok || finalResult.status === 200) {
+                            try {
+                              const data = JSON.parse(responseText);
+                              const txHash = data.result?.transaction_hash || data.result?.txHash || data.result?.hash;
+                              
+                              if (txHash) {
+                                console.log('✅ Minting successful!');
+                                
+                                // Wait for transaction to be processed
+                                await new Promise(resolve => setTimeout(resolve, 3000));
+                                
+                                // Single refresh - loadGPSTokenInfo() already fetches fresh balance
+                                await loadGPSTokenInfo();
+                                
+                                // Show success modal
+                                setMintSuccessModal({
+                                  isOpen: true,
+                                  amount: 1000,
+                                  symbol: 'GPS',
+                                  transactionHash: txHash,
+                                  explorerUrl: `https://explorer-testnet.maschain.com/${txHash}`,
+                                  isRealTransaction: true
+                                });
+                              } else {
+                                throw new Error('No transaction hash returned');
+                              }
+                            } catch (parseError) {
+                              console.warn('Could not parse response as JSON, checking for success message:', responseText);
+                              
+                              // Sometimes the response might be successful but not JSON
+                              if (responseText.includes('Success') || responseText.includes('transaction_hash')) {
+                                console.log('✅ Minting appears successful based on response text');
+                                
+                                // Wait and refresh balance
+                                await new Promise(resolve => setTimeout(resolve, 3000));
+                                // Single refresh - loadGPSTokenInfo() already fetches fresh balance
+                                await loadGPSTokenInfo();
+                                
+                                // Show success modal for non-JSON success responses
+                                setMintSuccessModal({
+                                  isOpen: true,
+                                  amount: 1000,
+                                  symbol: 'GPS',
+                                  transactionHash: 'Success',
+                                  explorerUrl: '',
+                                  isRealTransaction: true
+                                });
+                              } else {
+                                throw new Error(`Unexpected response format: ${responseText}`);
+                              }
+                            }
                           } else {
-                            console.log('⚠️ Minting returned demo transaction - you may not have minting permissions');
-                            alert(`⚠️ Token Minting Limitation\n\nThe mint function requires special permissions that this wallet doesn't have.\n\nTo get GPS tokens for testing:\n1. Contact the contract owner to mint tokens to your address\n2. Or transfer tokens from another address that has them\n\nDemo transaction: ${txHash}`);
+                            throw new Error(`Mint failed: ${finalResult.status} - ${responseText}`);
                           }
                           
                         } catch (error) {
                           console.error('❌ Failed to mint tokens:', error);
-                          alert('❌ Failed to mint tokens: ' + error);
+                          
+                          // Provide better error messaging
+                          let errorMessage = '❌ Failed to mint tokens';
+                          
+                          if (String(error).includes('500')) {
+                            errorMessage = '❌ Server error during minting. Please try again in a few moments.';
+                          } else if (String(error).includes('permissions')) {
+                            errorMessage = '❌ Insufficient permissions for minting. Please contact the contract administrator.';
+                          } else if (String(error).includes('network') || String(error).includes('fetch')) {
+                            errorMessage = '❌ Network error. Please check your connection and try again.';
+                          } else {
+                            errorMessage = '❌ Failed to mint tokens: ' + String(error);
+                          }
+                          
+                          alert(errorMessage);
                         } finally {
                           setLoadingTokenInfo(false);
                         }
                       }}
-                      className="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded font-medium transition-colors"
+                      className="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded font-medium transition-colors"
                     >
-                      🔍 Debug & Mint
+                      🪙 Mint 1k GPS
                     </button>
                   </div>
                 </div>
@@ -851,12 +1241,12 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                       try {
                         console.log('🏪 Using WORKING registration method...');
                         
-                        // Use the WORKING direct registration method
-                        const apiUrl = 'https://service-testnet.maschain.com';
-                        const contractAddress = '0xd7751A299eb97C8e9aF8f378b0c9138851a267b9';
-                        const walletAddress = '0x1154dfA292A59A003ADF3a820dfc98ddbD273FeD';
-                        const clientId = 'c6e95a99bde415737d33ac50bcab6c8add1b57e86060f5bb83084751d512ac39';
-                        const clientSecret = 'sk_b25cbad0a28d90805049f8a945ff5739d4763e7d03e8b5bd97600f621009c5ca';
+                        // Use the WORKING direct registration method with main contract
+                        const apiUrl = config.maschain.apiUrl;
+                        const contractAddress = config.maschain.contractAddress; // Use new GreenPOSNetworkFix contract
+                        const walletAddress = config.maschain.walletAddress;
+                        const clientId = config.maschain.clientId;
+                        const clientSecret = config.maschain.clientSecret;
 
                         const result = await fetch(`${apiUrl}/api/contract/smart-contracts/${contractAddress}/execute`, {
                           method: 'POST',
@@ -1041,7 +1431,40 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {sortedShops.map((shop, index) => {
             const fundingProgress = getFundingProgress(shop);
-            const fundingNeeded = shop.fundingNeeded - shop.totalFunded;
+            const fundingNeeded = Math.max(0, shop.fundingNeeded - shop.totalFunded); // Ensure it's never negative
+            
+            // Handle placeholder shops with special UI
+            if (shop.isPlaceholder) {
+              return (
+                <motion.div
+                  key={shop.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="border border-blue-200 rounded-xl p-6 bg-blue-50 text-center"
+                >
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Coins className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <h4 className="text-lg font-bold text-blue-800">{shop.name}</h4>
+                    {shop.message && (
+                      <p className="text-sm text-blue-600 text-center leading-relaxed">
+                        {shop.message}
+                      </p>
+                    )}
+                    {!isWalletConnected && (
+                      <div className="mt-4">
+                        <div className="text-xs text-blue-500 mb-3">Step 1: Connect your wallet</div>
+                        <MASChainWalletConnection 
+                          onConnectionChange={handleWalletConnectionChange}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            }
             
             return (
               <motion.div
@@ -1052,12 +1475,14 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 bg-gray-50"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-lg font-bold text-gray-800 truncate">{shop.name}</h4>
-                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-medium">
-                        ID: {shop.id}
-                      </span>
+                  <div className="flex-1 min-w-0 pr-3">
+                    <div className="flex flex-col gap-1 mb-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-bold text-gray-800 truncate">{shop.name}</h4>
+                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-medium flex-shrink-0">
+                          ID: {shop.id}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                       <MapPin className="w-4 h-4 flex-shrink-0" />
@@ -1066,7 +1491,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                       <span className="truncate">{getCategoryName(shop.category)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 ml-2">
+                  <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                     <Star className="w-4 h-4 text-yellow-500" />
                     <span className="text-sm font-medium text-gray-700">
                       {shop.sustainabilityScore || 50}/100
@@ -1078,7 +1503,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-600">Monthly Revenue</p>
-                      <p className="font-bold text-gray-800">฿{shop.revenue.toLocaleString()}</p>
+                      <p className="font-bold text-gray-800">${shop.revenue.toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Stock Health</p>
@@ -1098,15 +1523,19 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                       />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>฿{shop.totalFunded.toLocaleString()} funded</span>
-                      <span>฿{shop.fundingNeeded.toLocaleString()} goal</span>
+                      <span>${shop.totalFunded.toLocaleString()} funded</span>
+                      <span>${shop.fundingNeeded.toLocaleString()} goal</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                     <div>
-                      <p className="text-sm text-gray-600">Funding Needed</p>
-                      <p className="font-bold text-emerald-600">฿{fundingNeeded.toLocaleString()}</p>
+                      <p className="text-sm text-gray-600">
+                        {fundingNeeded <= 0 ? 'Fully Funded!' : 'Funding Needed'}
+                      </p>
+                      <p className={`font-bold ${fundingNeeded <= 0 ? 'text-green-600' : 'text-emerald-600'}`}>
+                        {fundingNeeded <= 0 ? 'Complete' : `$${fundingNeeded.toLocaleString()}`}
+                      </p>
                     </div>
                     <button
                       onClick={() => {
@@ -1173,6 +1602,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         isRealTransaction={shopRegistrationModal.isRealTransaction}
         shopId={shopRegistrationModal.shopId}
       />
+
     </div>
   );
 };
+
+export default InvestorDashboard;

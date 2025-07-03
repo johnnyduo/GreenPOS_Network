@@ -12,6 +12,9 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { maschainService, NetworkStats, Shop } from '../services/maschain';
+import { SmartContractServiceLite } from '../services/smartContractLite';
+import { ShopRegistrationModal } from './ShopRegistrationModal';
+import { ShopRegistrationSuccessModal } from './ShopRegistrationSuccessModal';
 import { config } from '../config';
 
 interface SmartContractDemoProps {
@@ -25,6 +28,17 @@ export const SmartContractDemo: React.FC<SmartContractDemoProps> = ({ onBack }) 
   const [shops, setShops] = useState<Shop[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [contractAddress, setContractAddress] = useState<string>('');
+  
+  // Modal states
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<{
+    txHash: string;
+    shopData: any;
+  } | null>(null);
+  
+  // Smart contract service
+  const [smartContract] = useState(() => new SmartContractServiceLite());
 
   // Deployed contract address from config
   const DEPLOYED_CONTRACT_ADDRESS = config.maschain.contractAddress;
@@ -34,7 +48,19 @@ export const SmartContractDemo: React.FC<SmartContractDemoProps> = ({ onBack }) 
     setContractAddress(DEPLOYED_CONTRACT_ADDRESS);
     maschainService.setContractAddress(DEPLOYED_CONTRACT_ADDRESS);
     setIsConnected(true);
+    
+    // Initialize smart contract service and connect wallet
+    initializeSmartContract();
   }, []);
+
+  const initializeSmartContract = async () => {
+    try {
+      await smartContract.connectWallet();
+      console.log('🔗 Smart contract service initialized');
+    } catch (error) {
+      console.error('⚠️ Failed to initialize smart contract service:', error);
+    }
+  };
 
   const connectToContract = async () => {
     setLoading(true);
@@ -157,22 +183,36 @@ export const SmartContractDemo: React.FC<SmartContractDemoProps> = ({ onBack }) 
     return shop.fundingNeeded > 0 ? Math.round((shop.totalFunded / shop.fundingNeeded) * 100) : 0;
   };
 
+  // Modal handlers
+  const handleRegistrationSuccess = async (txHash: string, shopData: any) => {
+    setRegistrationResult({ txHash, shopData });
+    setShowSuccessModal(true);
+    
+    // Refresh shop data after successful registration
+    setTimeout(() => {
+      refreshShopData();
+    }, 2000);
+  };
+
+  const refreshShopData = async () => {
+    try {
+      setLoading(true);
+      const freshShops = await smartContract.getRegisteredShops();
+      setShops(freshShops);
+    } catch (error) {
+      console.error('Failed to refresh shop data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const demoActions = [
     {
       title: 'Register New Shop',
       description: 'Add a new rural business to the network',
       icon: Store,
-      action: async () => {
-        setLoading(true);
-        try {
-          // Mock registration
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          alert('Shop registered successfully! (Demo mode)');
-        } catch (err) {
-          setError('Failed to register shop');
-        } finally {
-          setLoading(false);
-        }
+      action: () => {
+        setShowRegistrationModal(true);
       },
     },
     {
@@ -455,6 +495,27 @@ export const SmartContractDemo: React.FC<SmartContractDemoProps> = ({ onBack }) 
           </div>
         </div>
       </div>
+      
+      {/* Modals */}
+      <ShopRegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+        onSuccess={handleRegistrationSuccess}
+        smartContract={smartContract}
+      />
+      
+      <ShopRegistrationSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        shopName={registrationResult?.shopData?.name || ''}
+        category={registrationResult?.shopData?.category || 'Unknown'}
+        location={registrationResult?.shopData?.location || ''}
+        fundingGoal={100}
+        transactionHash={registrationResult?.txHash}
+        explorerUrl={`${config.maschain.explorerUrl}/${registrationResult?.txHash}`}
+        isRealTransaction={true}
+        shopId={`${registrationResult?.shopData?.id || 'TBD'}`}
+      />
     </div>
   );
 };

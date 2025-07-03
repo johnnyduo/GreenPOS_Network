@@ -8,7 +8,7 @@ export enum ShopCategory {
 }
 
 export interface Shop {
-  id: string;
+  id: string | number; // Allow both string and number for compatibility
   owner: string;
   name: string;
   category: ShopCategory;
@@ -29,6 +29,9 @@ export interface Shop {
   liveStream: string;
   country: string;
   inventory: InventoryItem[];
+  // Optional fields for placeholder/error states
+  isPlaceholder?: boolean;
+  message?: string;
 }
 
 export interface BlockchainShop {

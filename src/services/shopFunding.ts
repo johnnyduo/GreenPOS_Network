@@ -1,5 +1,7 @@
 import { Shop } from '../types';
-import { smartContractService } from './smartContractLite';
+
+// Use dynamic import to avoid circular dependency issues
+let smartContractService: any = null;
 
 class ShopFundingService {
   private shopFundingCache: Map<string, number> = new Map();
@@ -8,7 +10,23 @@ class ShopFundingService {
   constructor() {
     // Listen for funding events from smart contract service
     window.addEventListener('shopFunded', this.handleFundingEvent.bind(this) as EventListener);
+    
+    // Initialize smart contract service lazily
+    this.initSmartContractService();
+    
+    // Load existing funding cache
     this.loadFundingCache();
+  }
+
+  private async initSmartContractService() {
+    if (!smartContractService) {
+      try {
+        const module = await import('./smartContractLite');
+        smartContractService = module.smartContractService;
+      } catch (error) {
+        console.error('Failed to load smartContractService:', error);
+      }
+    }
   }
 
   private loadFundingCache() {
@@ -52,13 +70,14 @@ class ShopFundingService {
   }
 
   getShopFunding(shopId: string): number {
-    const contractFunding = smartContractService.getTotalFundedForShop(shopId);
+    // Use contract funding if available, otherwise use cache
+    const contractFunding = smartContractService?.getTotalFundedForShop?.(shopId) || 0;
     const cacheFunding = this.shopFundingCache.get(shopId) || 0;
     return Math.max(contractFunding, cacheFunding);
   }
 
   getUpdatedShop(originalShop: Shop): Shop {
-    const additionalFunding = this.getShopFunding(originalShop.id);
+    const additionalFunding = this.getShopFunding(originalShop.id.toString());
     return {
       ...originalShop,
       totalFunded: originalShop.totalFunded + additionalFunding

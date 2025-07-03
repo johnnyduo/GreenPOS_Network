@@ -156,7 +156,7 @@ export class MASChainService {
   }
 
   /**
-   * Call a smart contract function (read-only)
+   * Call a smart contract function (read-only) with enhanced error handling
    */
   async callContract(address: string, params: ContractCallParams): Promise<any> {
     return this.throttleRequest(async () => {
@@ -173,7 +173,17 @@ export class MASChainService {
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`❌ Contract call failed: ${response.status} - ${errorText}`);
-          throw new Error(`HTTP error! status: ${response.status}`);
+          
+          // Enhanced error handling for common issues
+          if (response.status === 401) {
+            throw new Error(`Authentication failed: Invalid API credentials. Please check your MASchain client_id and client_secret.`);
+          } else if (response.status === 404) {
+            throw new Error(`Endpoint not found: The MASchain API endpoint may be incorrect. Current: ${this.config.apiUrl}`);
+          } else if (response.status >= 500) {
+            throw new Error(`MASchain server error (${response.status}): The service may be temporarily unavailable.`);
+          }
+          
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const result = await response.json();
@@ -181,6 +191,12 @@ export class MASChainService {
         return result.result;
       } catch (error) {
         console.error('❌ Error calling contract:', error);
+        
+        // Add specific handling for network errors
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+          throw new Error(`Network error: Unable to connect to MASchain API at ${this.config.apiUrl}. Please check your internet connection and API endpoint.`);
+        }
+        
         throw error;
       }
     });
@@ -356,7 +372,7 @@ export class MASChainService {
       
       case 'registerInvestor':
         mappedParams = {
-          '_name': args[0]
+          'name': args[0] // Changed from '_name' to 'name' based on API error
         };
         break;
       
