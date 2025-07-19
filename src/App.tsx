@@ -23,6 +23,7 @@ function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [showSmartContractDemo, setShowSmartContractDemo] = useState(false);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
+  const [posShop, setPosShop] = useState<Shop | null>(null);
   const [isPOSOpen, setIsPOSOpen] = useState(false);
   const [showMoneyFlow, setShowMoneyFlow] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -152,6 +153,7 @@ function App() {
             shops={shops}
             transactions={transactions}
             onShopSelect={setSelectedShop}
+            onPosShopSelect={setPosShop}
             onOpenPOS={() => setIsPOSOpen(true)}
             onRestockShop={handleRestockShop}
             onInventoryUpdate={handleInventoryUpdate}
@@ -349,7 +351,7 @@ function App() {
       <POSQuickAdd
         isOpen={isPOSOpen}
         onClose={() => setIsPOSOpen(false)}
-        shop={selectedShop}
+        shop={posShop}
         onSaleComplete={handleSaleComplete}
       />
 

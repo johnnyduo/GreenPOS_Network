@@ -14,6 +14,7 @@ export interface MASChainConfig {
   walletAddress: string;
   explorerUrl: string;
   portalUrl: string;
+  gpsTokenAddress: string;
 }
 
 export interface ContractCallParams {
@@ -82,6 +83,7 @@ export class MASChainService {
       walletAddress: config.maschain.walletAddress,
       explorerUrl: config.maschain.explorerUrl,
       portalUrl: config.maschain.portalUrl,
+      gpsTokenAddress: config.maschain.gpsTokenAddress,
     };
     
     // Set the deployed contract address from config
@@ -583,6 +585,52 @@ export class MASChainService {
       [shopId.toString(), amount.toString()]
     );
     return result.transaction_hash;
+  }
+
+  /**
+   * Transfer GPS tokens (ERC20 transfer)
+   */
+  async transferGPS(toAddress: string, amount: number): Promise<string> {
+    if (!this.config.gpsTokenAddress) {
+      throw new Error('GPS token address not configured');
+    }
+
+    // Convert amount to wei (assuming 18 decimals for GPS token)
+    const amountInWei = (amount * Math.pow(10, 18)).toString();
+
+    const result = await this.executeContract(
+      this.config.gpsTokenAddress, 
+      'transfer',
+      [toAddress, amountInWei]
+    );
+    return result.transaction_hash;
+  }
+
+  /**
+   * Process a sale transaction with GPS payment
+   */
+  async processSaleWithGPS(shopId: number, saleAmount: number, gpsAmount: number = 10): Promise<{ txHash: string; explorerUrl: string }> {
+    try {
+      console.log(`🔄 Processing sale for shop ${shopId} with ${gpsAmount} GPS payment...`);
+      
+      // Transfer fixed 10 GPS tokens to our own wallet (mock payment)
+      const txHash = await this.transferGPS(this.config.walletAddress, gpsAmount);
+      
+      // Record the sale on the main contract
+      await this.recordSale(shopId, saleAmount);
+      
+      const explorerUrl = `${this.config.explorerUrl}/tx/${txHash}`;
+      
+      console.log(`✅ Sale processed successfully! TX: ${txHash}`);
+      
+      return {
+        txHash,
+        explorerUrl
+      };
+    } catch (error) {
+      console.error('❌ Failed to process sale with GPS:', error);
+      throw error;
+    }
   }
 
   /**

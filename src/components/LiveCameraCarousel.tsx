@@ -9,28 +9,34 @@ interface LiveCameraCarouselProps {
   };
 }
 
-export const LiveCameraCarousel: React.FC<LiveCameraCarouselProps> = ({ shop }) => {
+export const LiveCameraCarousel: React.FC<LiveCameraCarouselProps> = ({ shop: _ }) => {
   const [currentCamera, setCurrentCamera] = useState(0);
   
-  // Mock multiple camera feeds
+  // Mock multiple camera feeds with animated GIFs
   const cameraFeeds = [
     {
       id: 1,
       name: 'Front Store',
-      url: shop.liveStream,
+      url: 'https://solink.com/wp-content/uploads/2022/06/360-camera-solink-view.gif',
       description: 'Main entrance and customer area'
     },
     {
       id: 2,
       name: 'Checkout Counter',
-      url: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400',
+      url: 'https://solink.com/wp-content/uploads/2022/06/360-camera-solink-view.gif',
       description: 'Point of sale and transaction area'
     },
     {
       id: 3,
       name: 'Storage Area',
-      url: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=400',
+      url: 'https://solink.com/wp-content/uploads/2022/06/360-camera-solink-view.gif',
       description: 'Inventory and storage monitoring'
+    },
+    {
+      id: 4,
+      name: 'Product Display',
+      url: 'https://solink.com/wp-content/uploads/2022/06/360-camera-solink-view.gif',
+      description: 'Product shelves and displays'
     }
   ];
 
@@ -68,53 +74,56 @@ export const LiveCameraCarousel: React.FC<LiveCameraCarouselProps> = ({ shop }) 
         </div>
       </div>
       
-      <div className="relative rounded-lg overflow-hidden h-32 mb-2 bg-gray-200">
+      <div className="relative rounded-lg overflow-hidden h-40 mb-3 bg-gray-900">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentCamera}
             src={cameraFeeds[currentCamera].url}
             alt={cameraFeeds[currentCamera].name}
             className="w-full h-full object-cover"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=400';
-            }}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.4 }}
           />
         </AnimatePresence>
         
-        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+        <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
           LIVE
         </div>
         
-        <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+        <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-medium">
           {cameraFeeds[currentCamera].name}
         </div>
         
-        <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
-          Active Monitoring
+        <div className="absolute bottom-3 right-3 bg-emerald-500/90 text-white px-2 py-1 rounded text-xs font-medium">
+          📹 HD
         </div>
+
+        {/* Gradient overlay for better text visibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20 pointer-events-none"></div>
       </div>
       
-      <p className="text-xs text-gray-600 text-center">
-        {cameraFeeds[currentCamera].description}
-      </p>
-      
-      {/* Camera indicators */}
-      <div className="flex justify-center gap-1 mt-2">
-        {cameraFeeds.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentCamera(index)}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              index === currentCamera ? 'bg-emerald-500' : 'bg-gray-300'
-            }`}
-          />
-        ))}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-600 font-medium">
+          {cameraFeeds[currentCamera].description}
+        </p>
+        
+        {/* Enhanced Camera indicators */}
+        <div className="flex justify-center gap-1.5">
+          {cameraFeeds.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentCamera(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                index === currentCamera 
+                  ? 'bg-emerald-500 scale-125' 
+                  : 'bg-gray-300 hover:bg-gray-400'
+              }`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

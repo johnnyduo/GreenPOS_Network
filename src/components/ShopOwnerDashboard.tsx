@@ -10,6 +10,7 @@ interface ShopOwnerDashboardProps {
   shops: Shop[];
   transactions: Transaction[];
   onShopSelect: (shop: Shop) => void;
+  onPosShopSelect: (shop: Shop) => void;
   onOpenPOS: () => void;
   onRestockShop: (shop: Shop) => void;
   onInventoryUpdate: (shopId: string, updatedInventory: InventoryItem[]) => void;
@@ -19,11 +20,12 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
   shops,
   transactions,
   onShopSelect,
+  onPosShopSelect,
   onOpenPOS,
   onRestockShop,
   onInventoryUpdate
 }) => {
-  const [selectedShopId, setSelectedShopId] = useState<string>(shops[0]?.id || '');
+  const [selectedShopId, setSelectedShopId] = useState<string>(shops[0]?.id?.toString() || '');
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   
@@ -36,7 +38,8 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const handleQuickSale = () => {
-    onShopSelect(selectedShop);
+    // Set the shop for POS only (not for main shop detail panel)
+    onPosShopSelect(selectedShop);
     onOpenPOS();
   };
 
