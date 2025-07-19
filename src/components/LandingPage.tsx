@@ -140,7 +140,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
                 <div className="text-base text-gray-600 font-medium">Active Shops</div>
               </div>
               <div className="bg-white/30 backdrop-blur-lg border border-white/40 rounded-2xl p-6 hover:bg-white/40 transition-all duration-300 shadow-lg hover:shadow-xl">
-                <div className="text-3xl sm:text-4xl font-black text-emerald-600 mb-2">$38K+</div>
+                <div className="text-3xl sm:text-4xl font-black text-emerald-600 mb-2">$145K+</div>
                 <div className="text-base text-gray-600 font-medium">Funds Deployed</div>
               </div>
               <div className="bg-white/30 backdrop-blur-lg border border-white/40 rounded-2xl p-6 hover:bg-white/40 transition-all duration-300 shadow-lg hover:shadow-xl">
@@ -519,6 +519,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
               </motion.button>
 
               <motion.button
+                onClick={onEnterApp}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="group px-8 py-4 bg-white/20 backdrop-blur-md border border-white/30 text-white font-medium rounded-2xl hover:bg-white/30 transition-all duration-300 flex items-center gap-3"
@@ -548,7 +549,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp }) => {
             
             <div className="text-center md:text-right">
               <p className="text-gray-400 text-sm">
-                © 2024 GreenPOS Network. Empowering rural communities.
+                © 2025 GreenPOS Network. Empowering rural communities.
               </p>
               <p className="text-gray-500 text-xs mt-1">
                 Built on MASChain • SDG-9 Compliant
