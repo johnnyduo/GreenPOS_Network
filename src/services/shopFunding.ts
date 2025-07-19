@@ -14,8 +14,13 @@ class ShopFundingService {
     // Initialize smart contract service lazily
     this.initSmartContractService();
     
-    // Load existing funding cache
-    this.loadFundingCache();
+    // CRITICAL FIX: Clear existing funding cache to prevent double counting issues
+    console.log('🔄 Clearing shop funding cache to prevent double counting...');
+    localStorage.removeItem('greenpos_shop_funding_cache');
+    this.shopFundingCache.clear();
+    
+    // Don't load existing funding cache - start fresh to fix double funding issue
+    // this.loadFundingCache();
   }
 
   private async initSmartContractService() {
@@ -29,17 +34,18 @@ class ShopFundingService {
     }
   }
 
-  private loadFundingCache() {
-    try {
-      const stored = localStorage.getItem('greenpos_shop_funding_cache');
-      if (stored) {
-        const data = JSON.parse(stored);
-        this.shopFundingCache = new Map(Object.entries(data));
-      }
-    } catch (error) {
-      console.warn('Failed to load shop funding cache:', error);
-    }
-  }
+  // Temporarily disabled to prevent double funding issues
+  // private loadFundingCache() {
+  //   try {
+  //     const stored = localStorage.getItem('greenpos_shop_funding_cache');
+  //     if (stored) {
+  //       const data = JSON.parse(stored);
+  //       this.shopFundingCache = new Map(Object.entries(data));
+  //     }
+  //   } catch (error) {
+  //     console.warn('Failed to load shop funding cache:', error);
+  //   }
+  // }
 
   private saveFundingCache() {
     try {
@@ -55,7 +61,14 @@ class ShopFundingService {
     const { shopId, amount } = customEvent.detail;
     const shopIdStr = shopId.toString();
     
-    // Update funding cache
+    // CRITICAL FIX: For numeric shop IDs (on-chain shops), don't accumulate in cache
+    // The blockchain already handles the funding amount correctly
+    if (typeof shopId === 'number' || /^\d+$/.test(shopIdStr)) {
+      console.log(`🔗 On-chain shop ${shopId} funded with ${amount} GPS - blockchain handles this automatically`);
+      return; // Don't add to cache for on-chain shops
+    }
+    
+    // Only track funding for demo shops in cache
     const currentFunding = this.shopFundingCache.get(shopIdStr) || 0;
     const newFunding = currentFunding + amount;
     this.shopFundingCache.set(shopIdStr, newFunding);
@@ -66,7 +79,7 @@ class ShopFundingService {
     // Notify listeners
     this.listeners.forEach(listener => listener(shopIdStr, newFunding));
     
-    console.log(`📈 Shop ${shopId} funding updated: +${amount} GPS (Total: ${newFunding} GPS)`);
+    console.log(`📈 Demo shop ${shopId} funding updated: +${amount} GPS (Total: ${newFunding} GPS)`);
   }
 
   getShopFunding(shopId: string): number {
@@ -77,7 +90,17 @@ class ShopFundingService {
   }
 
   getUpdatedShop(originalShop: Shop): Shop {
+    // CRITICAL FIX: Don't double-add funding if shop data comes from blockchain 
+    // (blockchain data already includes all funding)
+    if (originalShop.isDemoData === false) {
+      // This is on-chain data - blockchain already includes all funding, don't add cache
+      console.log(`🔗 Shop ${originalShop.id} is on-chain data - using blockchain funding only: ${originalShop.totalFunded} GPS`);
+      return originalShop;
+    }
+    
+    // For demo shops only, add cached funding amounts
     const additionalFunding = this.getShopFunding(originalShop.id.toString());
+    console.log(`🏪 Demo shop ${originalShop.id} - adding cached funding: ${originalShop.totalFunded} + ${additionalFunding} = ${originalShop.totalFunded + additionalFunding} GPS`);
     return {
       ...originalShop,
       totalFunded: originalShop.totalFunded + additionalFunding

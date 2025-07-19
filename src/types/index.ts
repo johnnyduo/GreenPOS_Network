@@ -32,6 +32,8 @@ export interface Shop {
   // Optional fields for placeholder/error states
   isPlaceholder?: boolean;
   message?: string;
+  // Flag to distinguish between on-chain data vs demo data
+  isDemoData?: boolean;
 }
 
 export interface BlockchainShop {
