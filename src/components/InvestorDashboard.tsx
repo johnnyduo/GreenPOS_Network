@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, DollarSign, Target, MapPin, Star, Filter, Loader, Coins, CheckCircle, AlertCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, Target, MapPin, Star, Filter, Loader, Coins, CheckCircle } from 'lucide-react';
 import { Shop, Transaction, getCategoryName, NetworkStats } from '../types';
 import { config } from '../config';
-import MASChainWalletConnection from './MASChainWalletConnection';
 import SmartContractFundingModal from './SmartContractFundingModal';
 import { MintSuccessModal } from './MintSuccessModal';
 import { ShopRegistrationSuccessModal } from './ShopRegistrationSuccessModal';
@@ -123,7 +122,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   // Pagination state for great UX with perfect combination of on-chain + demo data
   const [currentPage, setCurrentPage] = useState(1);
   const [shopsPerPage] = useState(6); // Show 6 shops per page for optimal layout
-  const [totalShops, setTotalShops] = useState(0);
+  
+  const [isConnecting, setIsConnecting] = useState(false);
   
    // Mint success modal state
   const [mintSuccessModal, setMintSuccessModal] = useState({
@@ -306,9 +306,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   const indexOfFirstShop = indexOfLastShop - shopsPerPage;
   const currentShops = sortedShops.slice(indexOfFirstShop, indexOfLastShop);
 
-  // Update totalShops when shops change
+  // Update pagination when shops change
   React.useEffect(() => {
-    setTotalShops(sortedShops.length);
     // Reset to first page if current page is beyond available pages
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(1);
@@ -641,25 +640,33 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         return;
       }
       
-      // FIXED: Always check for configured wallet, regardless of current UI state
+      // FIXED: Always check for configured wallet AND localStorage, regardless of current UI state
       const configuredAddress = smartContractService.getWalletAddress() || config.maschain.walletAddress;
+      const storedAddress = localStorage.getItem('maschain_wallet_address');
+      const storedConnection = localStorage.getItem('maschain_connected');
       
-      if (configuredAddress) {
-        console.log('🔗 Found configured wallet address, auto-connecting:', configuredAddress);
+      // Prioritize stored connection over configured address
+      const addressToUse = (storedConnection === 'true' && storedAddress) ? storedAddress : configuredAddress;
+      
+      if (addressToUse) {
+        console.log('🔗 Found wallet address, auto-connecting:', { 
+          source: storedConnection === 'true' && storedAddress ? 'localStorage' : 'config',
+          address: addressToUse 
+        });
         
         // Ensure service has the wallet address set
-        smartContractService.setWalletAddress(configuredAddress);
+        smartContractService.setWalletAddress(addressToUse);
         
         // Set the wallet as connected in the UI
-        await handleWalletConnectionChange(true, configuredAddress);
+        await handleWalletConnectionChange(true, addressToUse);
         
-        console.log('✅ Configured wallet auto-connected successfully');
+        console.log('✅ Wallet auto-connected successfully');
         initializationDoneRef.current = true;
         
         // GPS token info will be loaded automatically by the useEffect above
         // when isWalletConnected becomes true
       } else {
-        console.log('💡 No configured wallet address found, user needs to connect manually');
+        console.log('💡 No wallet address found (checked localStorage and config), user needs to connect manually');
         initializationDoneRef.current = true;
       }
     };
@@ -739,80 +746,6 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* AI Sustainability Analysis */}
-      {isWalletConnected && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-sm font-bold text-purple-800">
-                  🤖 AI-Powered Sustainability Analysis
-                </p>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-purple-600">Live Analysis</span>
-                </div>
-              </div>
-              <p className="text-xs text-purple-700 mb-2">
-                Real-time ESG scoring and sustainability insights powered by <strong>Google Gemini 2.5 Pro</strong>
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                <div className="bg-white/50 rounded-lg p-2 border border-purple-100">
-                  <p className="font-medium text-purple-800">Model Architecture</p>
-                  <p className="text-purple-600">Gemini 2.5 Pro with 2M context window</p>
-                </div>
-                <div className="bg-white/50 rounded-lg p-2 border border-purple-100">
-                  <p className="font-medium text-purple-800">Analysis Scope</p>
-                  <p className="text-purple-600">Environment • Social • Governance scoring</p>
-                </div>
-                <div className="bg-white/50 rounded-lg p-2 border border-purple-100">
-                  <p className="font-medium text-purple-800">Update Frequency</p>
-                  <p className="text-purple-600">Real-time with blockchain integration</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Production Disclosure */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-blue-50 border border-blue-200 rounded-lg p-4"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-500 rounded-lg">
-            <CheckCircle className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-sm font-bold text-blue-800">
-                🚀 Production-Grade Blockchain Integration
-              </p>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-blue-600">Live Blockchain</span>
-              </div>
-            </div>
-            <p className="text-xs text-blue-600">
-              All operations use real blockchain transactions on MASchain only. No demo transactions
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Wallet Connection Section */}
-      <MASChainWalletConnection onConnectionChange={handleWalletConnectionChange} />
 
       {/* Investment Overview */}
       <motion.div
@@ -820,41 +753,111 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200"
       >
-        <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-800">Investment Dashboard</h2>
           
-          {/* Service Status Indicator */}
-          {serviceStatus !== 'available' && (
-            <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
-              serviceStatus === 'degraded' 
-                ? 'bg-yellow-50 border border-yellow-200 text-yellow-700'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}>
-              <AlertCircle className="w-4 h-4" />
-              <span>
-                {serviceStatus === 'degraded' 
-                  ? 'Service performance degraded - some features may be limited'
-                  : 'Blockchain service temporarily unavailable'
-                }
-              </span>
+          {/* Clean Wallet Connection */}
+          {isWalletConnected ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-700 font-medium">
+                  {connectedAddress ? `${connectedAddress.slice(0, 6)}...${connectedAddress.slice(-4)}` : 'Connected'}
+                </span>
+              </div>
               <button
                 onClick={() => {
-                  setServiceStatus('available');
-                  console.log('✅ Service status reset manually');
+                  // Disconnect wallet properly
+                  localStorage.removeItem('maschain_wallet_address');
+                  localStorage.removeItem('maschain_connected');
+                  setIsWalletConnected(false);
+                  setConnectedAddress(undefined);
+                  console.log('🔌 Wallet disconnected');
+                  handleWalletConnectionChange(false);
                 }}
-                className="ml-2 px-2 py-1 bg-yellow-100 hover:bg-yellow-200 rounded text-xs font-medium transition-colors"
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg font-medium transition-colors"
               >
-                {serviceStatus === 'unavailable' ? 'Reset Service' : 'Retry'}
+                Disconnect
               </button>
             </div>
-          )}
-          
-          {!isWalletConnected && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-sm text-yellow-700">
-                Please connect your MASchain wallet to start investing
-              </p>
-            </div>
+          ) : (
+            <button
+              onClick={async () => {
+                if (isConnecting) return;
+                
+                try {
+                  setIsConnecting(true);
+                  console.log('🔄 Starting real wallet connection...');
+                  
+                  // Check for existing connection first
+                  const storedAddress = localStorage.getItem('maschain_wallet_address');
+                  const storedConnection = localStorage.getItem('maschain_connected');
+                  
+                  if (storedAddress && storedConnection === 'true') {
+                    // Auto-connect with stored address - verify it's still valid
+                    console.log('🔄 Auto-connecting with stored address...');
+                    try {
+                      // Import maschainService to verify the address
+                      const { maschainService } = await import('../services/maschain');
+                      await maschainService.getAccountNonce(storedAddress);
+                      
+                      setIsWalletConnected(true);
+                      setConnectedAddress(storedAddress);
+                      handleWalletConnectionChange(true, storedAddress);
+                      return;
+                    } catch (error) {
+                      console.warn('Stored address verification failed, connecting fresh:', error);
+                      // Continue to fresh connection below
+                    }
+                  }
+                  
+                  // Use the real configured wallet address (same as MASChainWalletConnection)
+                  const { config } = await import('../config');
+                  const configuredAddress = config.maschain.walletAddress;
+                  
+                  if (!configuredAddress) {
+                    throw new Error('No wallet address configured. Please check your environment variables.');
+                  }
+                  
+                  // Verify the address using maschainService (same as MASChainWalletConnection)
+                  const { maschainService } = await import('../services/maschain');
+                  await maschainService.getAccountNonce(configuredAddress);
+                  
+                  console.log('✅ Real wallet connection successful:', configuredAddress);
+                  
+                  // Store connection info
+                  localStorage.setItem('maschain_wallet_address', configuredAddress);
+                  localStorage.setItem('maschain_connected', 'true');
+                  setIsWalletConnected(true);
+                  setConnectedAddress(configuredAddress);
+                  
+                  // Trigger wallet connection change event
+                  handleWalletConnectionChange(true, configuredAddress);
+                  
+                } catch (error: any) {
+                  console.error('❌ Real wallet connection failed:', error);
+                  alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`);
+                } finally {
+                  setIsConnecting(false);
+                }
+              }}
+              disabled={isConnecting}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  Connect Wallet
+                </>
+              )}
+            </button>
           )}
         </div>
         
@@ -1490,7 +1493,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         </div>
       </motion.div>
 
-      {/* Perfect Combination Summary */}
+      {/* Perfect Combination Summary - HIDDEN */}
+      {/* 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1558,6 +1562,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
           </div>
         </div>
       </motion.div>
+      */}
 
       {/* Investment Opportunities */}
       <motion.div
@@ -1611,30 +1616,100 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
             
             // Handle placeholder shops with special UI
             if (shop.isPlaceholder) {
+              // If wallet is connected, show a different placeholder for loading/fetching state
+              if (isWalletConnected && shop.id === 'connect-wallet') {
+                return (
+                  <motion.div
+                    key="fetching-blockchain"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="border border-emerald-200 rounded-xl p-6 bg-gradient-to-br from-emerald-50 to-green-50 text-center relative overflow-hidden"
+                  >
+                    {/* Subtle background pattern */}
+                    <div className="absolute inset-0 opacity-5">
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-green-500 rotate-12 scale-150"></div>
+                    </div>
+                    
+                    <div className="relative z-10 flex flex-col items-center space-y-4">
+                      <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                        <Loader className="w-10 h-10 text-white animate-spin" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h4 className="text-xl font-bold text-gray-800">Loading Investment Opportunities</h4>
+                        <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">
+                          Fetching real shops from the MASchain blockchain...
+                        </p>
+                      </div>
+                      
+                      <div className="mt-6 p-4 bg-white/70 backdrop-blur-sm rounded-lg border border-emerald-200">
+                        <div className="flex items-center gap-2 justify-center mb-2">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium text-emerald-800">Blockchain Connected</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mb-3">
+                          Your wallet is connected. Loading live shop data from the blockchain...
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-xs text-emerald-600">
+                          <div className="flex space-x-1">
+                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-1 h-1 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          </div>
+                          <span>Processing blockchain data</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              }
+              
+              // For non-connected wallets, show the original connect wallet placeholder
               return (
                 <motion.div
                   key={shop.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="border border-blue-200 rounded-xl p-6 bg-blue-50 text-center"
+                  className="border border-blue-200 rounded-xl p-6 bg-gradient-to-br from-blue-50 to-indigo-50 text-center relative overflow-hidden"
                 >
-                  <div className="flex flex-col items-center space-y-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Coins className="w-8 h-8 text-blue-600" />
+                  {/* Subtle background pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rotate-12 scale-150"></div>
+                  </div>
+                  
+                  <div className="relative z-10 flex flex-col items-center space-y-4">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                      <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
                     </div>
-                    <h4 className="text-lg font-bold text-blue-800">{shop.name}</h4>
-                    {shop.message && (
-                      <p className="text-sm text-blue-600 text-center leading-relaxed">
-                        {shop.message}
-                      </p>
-                    )}
+                    
+                    <div className="space-y-2">
+                      <h4 className="text-xl font-bold text-gray-800">{shop.name}</h4>
+                      {shop.message && (
+                        <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">
+                          {shop.message}
+                        </p>
+                      )}
+                    </div>
+                    
                     {!isWalletConnected && (
-                      <div className="mt-4">
-                        <div className="text-xs text-blue-500 mb-3">Step 1: Connect your wallet</div>
-                        <MASChainWalletConnection 
-                          onConnectionChange={handleWalletConnectionChange}
-                        />
+                      <div className="mt-6 p-4 bg-white/70 backdrop-blur-sm rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 justify-center mb-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium text-blue-800">Ready to Connect</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mb-3">
+                          Use the <strong>"Connect Wallet"</strong> button in the header above to get started
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-xs text-blue-600">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                          <span>Scroll up to find the Connect Wallet button</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1914,6 +1989,90 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         isRealTransaction={shopRegistrationModal.isRealTransaction}
         shopId={shopRegistrationModal.shopId}
       />
+
+      {/* AI Sustainability Analysis - Always Visible */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4"
+      >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-bold text-purple-800">
+                  🤖 AI-Powered Sustainability Analysis
+                </p>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-purple-600">Live Analysis</span>
+                </div>
+              </div>
+              <p className="text-xs text-purple-700 mb-2">
+                Real-time ESG scoring and sustainability insights powered by <strong>Google Gemini 2.5 Pro</strong>
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="bg-white/50 rounded-lg p-2 border border-purple-100">
+                  <p className="font-medium text-purple-800">Model Architecture</p>
+                  <p className="text-purple-600">Gemini 2.5 Pro with 2M context window</p>
+                </div>
+                <div className="bg-white/50 rounded-lg p-2 border border-purple-100">
+                  <p className="font-medium text-purple-800">Analysis Scope</p>
+                  <p className="text-purple-600">Environment • Social • Governance scoring</p>
+                </div>
+                <div className="bg-white/50 rounded-lg p-2 border border-purple-100">
+                  <p className="font-medium text-purple-800">Update Frequency</p>
+                  <p className="text-purple-600">Real-time with blockchain integration</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+      {/* Production-Grade Blockchain Integration - Moved to Bottom */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-blue-50 border border-blue-200 rounded-lg p-4"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500 rounded-lg">
+            <CheckCircle className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm font-bold text-blue-800">
+                🚀 Production-Grade Blockchain Integration
+              </p>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-blue-600">Live Blockchain</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-700 mb-2">
+              All operations use real blockchain transactions on <strong>MASchain</strong> only. No demo transactions
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="bg-white/50 rounded-lg p-2 border border-blue-100">
+                <p className="font-medium text-blue-800">Network Infrastructure</p>
+                <p className="text-blue-600">MASchain Mainnet • Real transactions only</p>
+              </div>
+              <div className="bg-white/50 rounded-lg p-2 border border-blue-100">
+                <p className="font-medium text-blue-800">Transaction Security</p>
+                <p className="text-blue-600">Custodial wallet • Automated approvals</p>
+              </div>
+              <div className="bg-white/50 rounded-lg p-2 border border-blue-100">
+                <p className="font-medium text-blue-800">Data Integrity</p>
+                <p className="text-blue-600">Real-time synchronization • No fallbacks</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
     </div>
   );
