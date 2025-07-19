@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Activity, Eye, EyeOff, Leaf, Users, Store } from 'lucide-react';
 import { LandingPage } from './components/LandingPage';
 import { GlobalMapView } from './components/GlobalMapView';
+import { RecentSalesActivity } from './components/RecentSalesActivity';
 import { POSQuickAdd } from './components/POSQuickAdd';
 import { ShopDetailPanel } from './components/ShopDetailPanel';
 import { InvestorPortfolio } from './components/InvestorPortfolio';
@@ -50,14 +51,15 @@ function App() {
       setShops(prevShops => 
         prevShops.map(shop => ({
           ...shop,
-          revenue: shop.revenue + Math.floor(Math.random() * 100),
+          // More realistic revenue updates - smaller increments, some shops might have slower growth
+          revenue: shop.revenue + Math.floor(Math.random() * 25) + 1, // $1-$25 per update
           stockHealth: Math.max(0.1, shop.stockHealth + (Math.random() - 0.5) * 0.1),
           lastSale: Math.random() > 0.7 ? new Date() : shop.lastSale
         }))
       );
     };
 
-    const interval = setInterval(updateShops, 10000);
+    const interval = setInterval(updateShops, 30000); // Reduced frequency to every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -83,16 +85,10 @@ function App() {
     setIsRestockModalOpen(true);
   };
 
-  const handleFundingComplete = (shopId: string, amount: number) => {
-    setShops(prevShops =>
-      prevShops.map(shop =>
-        shop.id === shopId
-          ? { ...shop, totalFunded: shop.totalFunded + amount }
-          : shop
-      )
-    );
+    const handleFundingComplete = (txHash: string) => {
+    // Handle funding completion with transaction hash
+    console.log('Funding completed with transaction hash:', txHash);
     setIsFundingModalOpen(false);
-    setShopToFund(null);
   };
 
   const handleRestockComplete = (shopId: string, items: any[]) => {
@@ -174,32 +170,40 @@ function App() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="xl:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 shadow-lg"
+                className="xl:col-span-3 space-y-6"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Global Network</h2>
-                  <div className="flex gap-2 flex-wrap">
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                      {shops.filter(s => new Date().getTime() - s.lastSale.getTime() < 3600000).length} Active
-                    </span>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                      {shops.length} Total
-                    </span>
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                      HQ: Bangkok
-                    </span>
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Global Green SMEs Network</h2>
+                    <div className="flex gap-2 flex-wrap">
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                        {shops.filter(s => new Date().getTime() - s.lastSale.getTime() < 3600000).length} Active
+                      </span>
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        {shops.length} Total
+                      </span>
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                        HQ: Bangkok
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="h-96 lg:h-[600px] rounded-xl overflow-hidden border border-gray-200">
+                    <GlobalMapView
+                      shops={shops}
+                      transactions={transactions}
+                      selectedShop={selectedShop}
+                      onShopSelect={setSelectedShop}
+                      showMoneyFlow={showMoneyFlow}
+                    />
                   </div>
                 </div>
 
-                <div className="h-96 lg:h-[600px] rounded-xl overflow-hidden border border-gray-200">
-                  <GlobalMapView
-                    shops={shops}
-                    transactions={transactions}
-                    selectedShop={selectedShop}
-                    onShopSelect={setSelectedShop}
-                    showMoneyFlow={showMoneyFlow}
-                  />
-                </div>
+                {/* Recent Sales Activity */}
+                <RecentSalesActivity
+                  shops={shops}
+                  transactions={transactions}
+                />
               </motion.div>
 
               {/* Investor Portfolio */}

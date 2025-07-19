@@ -241,6 +241,75 @@ export const mockShops: Shop[] = [
       { id: 'inv_029', name: 'Glass Candle Holder', quantity: 25, price: 55, lowStockThreshold: 12, category: 'Lighting', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Elegant candle holder from upcycled glass' },
       { id: 'inv_030', name: 'Glass Drinking Set', quantity: 15, price: 120, lowStockThreshold: 6, category: 'Drinkware', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Set of 4 glasses made from recycled bottles' },
     ]
+  },
+  {
+    id: 'shop_011',
+    name: 'Ocean Plastic Recovery Center',
+    location: { lat: 14.5995, lng: 120.9842 },
+    revenue: 3200,
+    stockHealth: 0.85,
+    lastSale: new Date(Date.now() - 180000),
+    liveStream: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400',
+    country: 'Philippines',
+    owner: '0x1111111111111111111111111111111111111111',
+    category: ShopCategory.WasteUpcycling,
+    fundingNeeded: 6000,
+    totalFunded: 4200,
+    sustainabilityScore: 92,
+    isActive: true,
+    registeredAt: Math.floor(Date.now() / 1000) - 86400 * 45, // 45 days ago
+    lastSaleAt: Math.floor(Date.now() / 1000) - 180,
+    inventory: [
+      { id: 'inv_031', name: 'Ocean Plastic Backpack', quantity: 12, price: 180, lowStockThreshold: 5, category: 'Bags', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Durable backpack made from recycled ocean plastic' },
+      { id: 'inv_032', name: 'Recycled Phone Case', quantity: 30, price: 45, lowStockThreshold: 15, category: 'Electronics', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Protective phone case from ocean plastic waste' },
+      { id: 'inv_033', name: 'Eco Water Bottle', quantity: 25, price: 65, lowStockThreshold: 10, category: 'Drinkware', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Reusable water bottle from recycled materials' },
+    ]
+  },
+  {
+    id: 'shop_012',
+    name: 'Urban Vertical Garden',
+    location: { lat: 1.3521, lng: 103.8198 },
+    revenue: 2800,
+    stockHealth: 0.75,
+    lastSale: new Date(Date.now() - 240000),
+    liveStream: 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=400',
+    country: 'Singapore',
+    owner: '0x2222222222222222222222222222222222222222',
+    category: ShopCategory.OrganicProduce,
+    fundingNeeded: 5500,
+    totalFunded: 3800,
+    sustainabilityScore: 88,
+    isActive: true,
+    registeredAt: Math.floor(Date.now() / 1000) - 86400 * 60, // 60 days ago
+    lastSaleAt: Math.floor(Date.now() / 1000) - 240,
+    inventory: [
+      { id: 'inv_034', name: 'Microgreens Mix', quantity: 40, price: 25, lowStockThreshold: 20, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh microgreens grown in vertical farms' },
+      { id: 'inv_035', name: 'Hydroponic Lettuce', quantity: 18, price: 35, lowStockThreshold: 8, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Crisp lettuce grown without soil' },
+      { id: 'inv_036', name: 'Vertical Farm Kit', quantity: 8, price: 250, lowStockThreshold: 3, category: 'Gardening', image: 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete vertical farming setup for homes' },
+    ]
+  },
+  {
+    id: 'shop_013',
+    name: 'Renewable Energy Hub',
+    location: { lat: -6.2088, lng: 106.8456 },
+    revenue: 4200,
+    stockHealth: 0.90,
+    lastSale: new Date(Date.now() - 120000),
+    liveStream: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=400',
+    country: 'Indonesia',
+    owner: '0x3333333333333333333333333333333333333333',
+    category: ShopCategory.SolarKiosk,
+    fundingNeeded: 8000,
+    totalFunded: 6500,
+    sustainabilityScore: 95,
+    isActive: true,
+    registeredAt: Math.floor(Date.now() / 1000) - 86400 * 90, // 90 days ago
+    lastSaleAt: Math.floor(Date.now() / 1000) - 120,
+    inventory: [
+      { id: 'inv_037', name: 'Solar Panel Kit', quantity: 15, price: 380, lowStockThreshold: 5, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete solar panel system for homes' },
+      { id: 'inv_038', name: 'Wind Turbine Mini', quantity: 8, price: 550, lowStockThreshold: 3, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Small wind turbine for residential use' },
+      { id: 'inv_039', name: 'Energy Storage Battery', quantity: 12, price: 420, lowStockThreshold: 4, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Rechargeable battery for renewable energy storage' },
+    ]
   }
 ];
 
@@ -303,7 +372,7 @@ export const generateMockTransactions = (): Transaction[] => {
     
     transactions.push({
       id: `trans_${i}`,
-      shopId: shop.id,
+      shopId: String(shop.id),
       amount: Math.floor(Math.random() * 500) + 50,
       type,
       timestamp: new Date(now - Math.random() * 3600000),

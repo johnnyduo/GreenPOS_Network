@@ -34,7 +34,7 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm text-emerald-700">Total Invested</p>
-              <p className="text-xl font-bold text-emerald-800 truncate">฿{totalInvested.toLocaleString()}</p>
+              <p className="text-xl font-bold text-emerald-800 truncate">${totalInvested.toLocaleString()}</p>
             </div>
           </div>
         </motion.div>
@@ -98,7 +98,7 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
                 </div>
               </div>
               <div className="text-right ml-4">
-                <p className="text-gray-800 font-bold">฿{investor.totalInvested.toLocaleString()}</p>
+                <p className="text-gray-800 font-bold">${investor.totalInvested.toLocaleString()}</p>
                 <p className="text-sm text-emerald-600">+{investor.roi}% ROI</p>
               </div>
             </motion.div>
@@ -128,7 +128,7 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
                 </div>
               </div>
               <div className="text-right ml-4">
-                <p className="text-emerald-600 font-bold">+฿{transaction.amount}</p>
+                <p className="text-emerald-600 font-bold">+${transaction.amount}</p>
                 <p className="text-xs text-gray-500">Funding</p>
               </div>
             </motion.div>

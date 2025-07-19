@@ -137,7 +137,7 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
             <div class="space-y-1 text-sm">
               <div class="flex justify-between">
                 <span class="text-gray-600">Revenue:</span>
-                <span class="font-semibold text-green-600">฿${shop.revenue.toLocaleString()}</span>
+                <span class="font-semibold text-green-600">$${shop.revenue.toLocaleString()}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Stock Health:</span>
@@ -256,17 +256,17 @@ export const GlobalMapView: React.FC<GlobalMapViewProps> = ({
           
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-emerald-500 rounded-full animate-glow"></div>
-            <span className="text-sm">High Revenue ({'฿'}3000+)</span>
+            <span className="text-sm">High Revenue ($3000+)</span>
           </div>
           
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-            <span className="text-sm">Medium Revenue ({'฿'}2000+)</span>
+            <span className="text-sm">Medium Revenue ($2000+)</span>
           </div>
           
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span className="text-sm">Low Revenue (&lt;{'฿'}2000)</span>
+            <span className="text-sm">Low Revenue (&lt;$2000)</span>
           </div>
           
           <div className="flex items-center gap-3">
