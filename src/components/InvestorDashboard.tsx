@@ -656,62 +656,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
 
   // Auto-initialize wallet connection if configured wallet address exists
   useEffect(() => {
-    const initializeConfiguredWallet = async () => {
-      console.log('🔄 Auto-initialization starting...', {
-        isWalletConnected,
-        initializationDone: initializationDoneRef.current
-      });
-      
-      // Prevent multiple initializations
-      if (initializationDoneRef.current) {
-        console.log('🔗 Auto-initialization already completed, skipping...');
-        return;
-      }
-      
-      // Check if wallet is already connected in UI state
-      if (isWalletConnected) {
-        console.log('🔗 Wallet already connected in UI state');
-        initializationDoneRef.current = true;
-        return;
-      }
-      
-      // FIXED: Always check for configured wallet AND localStorage, regardless of current UI state
-      const configuredAddress = smartContractService.getWalletAddress() || config.maschain.walletAddress;
-      const storedAddress = localStorage.getItem('maschain_wallet_address');
-      const storedConnection = localStorage.getItem('maschain_connected');
-      
-      // Prioritize stored connection over configured address
-      const addressToUse = (storedConnection === 'true' && storedAddress) ? storedAddress : configuredAddress;
-      
-      if (addressToUse) {
-        console.log('🔗 Found wallet address, auto-connecting:', { 
-          source: storedConnection === 'true' && storedAddress ? 'localStorage' : 'config',
-          address: addressToUse 
-        });
-        
-        // Ensure service has the wallet address set
-        smartContractService.setWalletAddress(addressToUse);
-        
-        // Set the wallet as connected in the UI
-        await handleWalletConnectionChange(true, addressToUse);
-        
-        console.log('✅ Wallet auto-connected successfully');
-        initializationDoneRef.current = true;
-        
-        // GPS token info will be loaded automatically by the useEffect above
-        // when isWalletConnected becomes true
-      } else {
-        console.log('💡 No wallet address found (checked localStorage and config), user needs to connect manually');
-        initializationDoneRef.current = true;
-      }
-    };
-    
-    // Run initialization after component mounts with a small delay
-    const timeoutId = setTimeout(() => {
-      initializeConfiguredWallet();
-    }, 50);
-
-    return () => clearTimeout(timeoutId);
+    console.log('� Auto-connect disabled - users must manually connect their wallet');
+    initializationDoneRef.current = true;
   }, []); // Run only once on mount
 
   // Update shops with real-time funding data
@@ -822,31 +768,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 
                 try {
                   setIsConnecting(true);
-                  console.log('🔄 Starting real wallet connection...');
+                  console.log('🔄 Starting manual wallet connection...');
                   
-                  // Check for existing connection first
-                  const storedAddress = localStorage.getItem('maschain_wallet_address');
-                  const storedConnection = localStorage.getItem('maschain_connected');
-                  
-                  if (storedAddress && storedConnection === 'true') {
-                    // Auto-connect with stored address - verify it's still valid
-                    console.log('🔄 Auto-connecting with stored address...');
-                    try {
-                      // Import maschainService to verify the address
-                      const { maschainService } = await import('../services/maschain');
-                      await maschainService.getAccountNonce(storedAddress);
-                      
-                      setIsWalletConnected(true);
-                      setConnectedAddress(storedAddress);
-                      handleWalletConnectionChange(true, storedAddress);
-                      return;
-                    } catch (error) {
-                      console.warn('Stored address verification failed, connecting fresh:', error);
-                      // Continue to fresh connection below
-                    }
-                  }
-                  
-                  // Use the real configured wallet address (same as MASChainWalletConnection)
+                  // Use the configured wallet address from environment
                   const { config } = await import('../config');
                   const configuredAddress = config.maschain.walletAddress;
                   
@@ -854,11 +778,11 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                     throw new Error('No wallet address configured. Please check your environment variables.');
                   }
                   
-                  // Verify the address using maschainService (same as MASChainWalletConnection)
+                  // Verify the address using maschainService
                   const { maschainService } = await import('../services/maschain');
                   await maschainService.getAccountNonce(configuredAddress);
                   
-                  console.log('✅ Real wallet connection successful:', configuredAddress);
+                  console.log('✅ Manual wallet connection successful:', configuredAddress);
                   
                   // Store connection info
                   localStorage.setItem('maschain_wallet_address', configuredAddress);
@@ -870,7 +794,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                   handleWalletConnectionChange(true, configuredAddress);
                   
                 } catch (error: any) {
-                  console.error('❌ Real wallet connection failed:', error);
+                  console.error('❌ Manual wallet connection failed:', error);
                   alert(`Failed to connect wallet: ${error.message || 'Unknown error'}`);
                 } finally {
                   setIsConnecting(false);
@@ -1468,7 +1392,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
             <div className="bg-white rounded-lg p-4 border border-emerald-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Actions</p>
+                  <p className="text-sm text-gray-600">On-Chain Actions</p>
                   <button
                     onClick={() => setIsShopRegistrationModalOpen(true)}
                     className="mt-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
