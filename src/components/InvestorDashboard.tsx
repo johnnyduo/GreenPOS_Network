@@ -174,9 +174,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
     const loadBlockchainShops = async () => {
       console.log('🔄 loadBlockchainShops useEffect triggered:', { isWalletConnected, isLoading: loadingShopsRef.current });
       
-      // Prevent duplicate loads
+      // 🚀 PERFORMANCE FIX: Prevent duplicate loads from React StrictMode
       if (loadingShopsRef.current) {
-        console.log('⏳ Shop loading already in progress, skipping...');
+        console.log('⏳ Shop loading already in progress, skipping duplicate call...');
         return;
       }
       
@@ -269,8 +269,15 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
       }
     };
 
-    // Instant execution with no delay for best UX
-    loadBlockchainShops();
+    // 🚀 PERFORMANCE: Use a slight delay to debounce React StrictMode double calls
+    const debounceTimeout = setTimeout(() => {
+      loadBlockchainShops();
+    }, 10); // 10ms delay allows StrictMode duplicate to be cancelled
+
+    // Cleanup timeout if component unmounts or dependencies change
+    return () => {
+      clearTimeout(debounceTimeout);
+    };
   }, [isWalletConnected]); // Removed 'shops' dependency since we don't use it
 
   const categories = ['all', ...new Set(updatedShops.map(shop => getCategoryName(shop.category)))];

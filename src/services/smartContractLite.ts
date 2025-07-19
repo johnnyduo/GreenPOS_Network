@@ -62,6 +62,10 @@ export class SmartContractServiceLite {
   private isInitialLoadComplete: boolean = false;
   private dashboardCallCounter = 0; // Track dashboard calls
   
+  // 🚀 PERFORMANCE FIX: Prevent React StrictMode duplicate calls
+  private lastDashboardCallTime = 0;
+  private lastDashboardResult: any[] | null = null;
+  
   private readonly CACHE_DURATION = 30000; // 30 seconds for fresh data
   private readonly BACKGROUND_CACHE_DURATION = 120000; // 2 minutes for background cache
   private readonly SHOP_COUNT_CACHE_DURATION = 60000; // 1 minute for shop count
@@ -2683,6 +2687,13 @@ export class SmartContractServiceLite {
   async getShopsForInvestorDashboard(): Promise<any[]> {
     this.dashboardCallCounter++;
     const callId = this.dashboardCallCounter;
+    const now = Date.now();
+    
+    // 🚀 PERFORMANCE FIX: Return memoized result for rapid successive calls (React StrictMode)
+    if (this.lastDashboardResult && (now - this.lastDashboardCallTime < 100)) {
+      console.log(`⚡ MEMOIZED: Dashboard call #${callId} returning cached result from ${now - this.lastDashboardCallTime}ms ago`);
+      return this.lastDashboardResult;
+    }
     
     try {
       console.log(`💼 INSTANT Dashboard call #${callId}: Loading shops with instant response optimization...`);
@@ -2703,6 +2714,10 @@ export class SmartContractServiceLite {
       if (blockchainShops.length > 0 && blockchainShops[0].isDemoData) {
         console.log('🔄 Using demo shops due to MASchain API issues (instant fallback)');
         console.log('💡 Demo data includes 3 sample shops for development/testing');
+        
+        // Cache the result
+        this.lastDashboardResult = blockchainShops;
+        this.lastDashboardCallTime = now;
         return blockchainShops;
       }
       
@@ -2710,10 +2725,18 @@ export class SmartContractServiceLite {
         console.log(`⚠️ INSTANT Dashboard call #${callId}: No blockchain shops found. Returning demo data for good UX.`);
         const demoShops = this.getDemoShopsForFallback();
         console.log(`🆘 FALLBACK: Returning ${demoShops.length} demo shops for instant UX`);
+        
+        // Cache the result
+        this.lastDashboardResult = demoShops;
+        this.lastDashboardCallTime = now;
         return demoShops;
       }
       
       console.log(`⚡ INSTANT Dashboard call #${callId}: Instant response: ${blockchainShops.length} shops loaded from optimized cache`);
+      
+      // Cache the successful result
+      this.lastDashboardResult = blockchainShops;
+      this.lastDashboardCallTime = now;
       console.log(`📋 Complete shop list for dashboard:`, blockchainShops.map(shop => ({
         id: shop.id,
         name: shop.name,
