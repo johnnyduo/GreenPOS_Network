@@ -30,9 +30,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 3600 * 2, // 2 hours ago (most recent)
     lastSaleAt: Math.floor(Date.now() / 1000),
     inventory: [
-      { id: 'inv_001', name: 'Organic Tomatoes', quantity: 25, price: 35, lowStockThreshold: 10, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh organic tomatoes grown without pesticides' },
-      { id: 'inv_002', name: 'Organic Rice', quantity: 8, price: 85, lowStockThreshold: 5, category: 'Grains', image: 'https://orgboxthailand.com/wp-content/uploads/2020/04/wholegrainbrownrice-1.jpg', description: 'Premium organic jasmine rice' },
-      { id: 'inv_003', name: 'Fresh Herbs Bundle', quantity: 15, price: 45, lowStockThreshold: 8, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Mixed fresh herbs including basil, cilantro, and mint' },
+      { id: 'inv_001', name: 'Organic Tomatoes', quantity: 25, price: 4.50, lowStockThreshold: 10, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh organic tomatoes grown without pesticides' },
+      { id: 'inv_002', name: 'Organic Rice', quantity: 8, price: 12.99, lowStockThreshold: 5, category: 'Grains', image: 'https://orgboxthailand.com/wp-content/uploads/2020/04/wholegrainbrownrice-1.jpg', description: 'Premium organic jasmine rice' },
+      { id: 'inv_003', name: 'Fresh Herbs Bundle', quantity: 15, price: 6.25, lowStockThreshold: 8, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Mixed fresh herbs including basil, cilantro, and mint' },
     ]
   },
   {
@@ -53,9 +53,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 45, // 45 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 300,
     inventory: [
-      { id: 'inv_004', name: 'Bamboo Water Bottle', quantity: 12, price: 155, lowStockThreshold: 8, category: 'Drinkware', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Eco-friendly bamboo water bottle with natural finish' },
-      { id: 'inv_005', name: 'Bamboo Utensil Set', quantity: 20, price: 125, lowStockThreshold: 10, category: 'Kitchenware', image: 'https://images.pexels.com/photos/4099471/pexels-photo-4099471.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete bamboo utensil set with carrying case' },
-      { id: 'inv_006', name: 'Bamboo Phone Stand', quantity: 18, price: 80, lowStockThreshold: 5, category: 'Accessories', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Adjustable bamboo phone stand for desk use' },
+      { id: 'inv_004', name: 'Bamboo Water Bottle', quantity: 12, price: 18.99, lowStockThreshold: 8, category: 'Drinkware', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Eco-friendly bamboo water bottle with natural finish' },
+      { id: 'inv_005', name: 'Bamboo Utensil Set', quantity: 20, price: 14.50, lowStockThreshold: 10, category: 'Kitchenware', image: 'https://images.pexels.com/photos/4099471/pexels-photo-4099471.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete bamboo utensil set with carrying case' },
+      { id: 'inv_006', name: 'Bamboo Phone Stand', quantity: 18, price: 9.99, lowStockThreshold: 5, category: 'Accessories', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Adjustable bamboo phone stand for desk use' },
     ]
   },
   {
@@ -76,9 +76,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 20, // 20 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 1800,
     inventory: [
-      { id: 'inv_007', name: 'Phone Charging (30min)', quantity: 100, price: 15, lowStockThreshold: 50, category: 'Services', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Solar-powered phone charging service' },
-      { id: 'inv_008', name: 'Power Bank Rental', quantity: 25, price: 50, lowStockThreshold: 12, category: 'Electronics', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: '24-hour power bank rental service' },
-      { id: 'inv_009', name: 'Solar Lantern', quantity: 15, price: 120, lowStockThreshold: 8, category: 'Lighting', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Portable solar-powered LED lantern' },
+      { id: 'inv_007', name: 'Phone Charging (30min)', quantity: 100, price: 2.50, lowStockThreshold: 50, category: 'Services', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Solar-powered phone charging service' },
+      { id: 'inv_008', name: 'Power Bank Rental', quantity: 25, price: 8.00, lowStockThreshold: 12, category: 'Electronics', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: '24-hour power bank rental service' },
+      { id: 'inv_009', name: 'Solar Lantern', quantity: 15, price: 24.99, lowStockThreshold: 8, category: 'Lighting', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Portable solar-powered LED lantern' },
     ]
   },
   {
@@ -99,9 +99,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 60, // 60 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 600,
     inventory: [
-      { id: 'inv_010', name: 'Recycled Plastic Bag', quantity: 50, price: 25, lowStockThreshold: 25, category: 'Bags', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Durable bag made from recycled plastic bottles' },
-      { id: 'inv_011', name: 'Upcycled Planter', quantity: 12, price: 65, lowStockThreshold: 8, category: 'Garden', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Decorative planter made from waste materials' },
-      { id: 'inv_012', name: 'Recycled Notebook', quantity: 30, price: 35, lowStockThreshold: 15, category: 'Stationery', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Notebook made from recycled paper and plastic cover' },
+      { id: 'inv_010', name: 'Recycled Plastic Bag', quantity: 50, price: 3.99, lowStockThreshold: 25, category: 'Bags', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Durable bag made from recycled plastic bottles' },
+      { id: 'inv_011', name: 'Upcycled Planter', quantity: 12, price: 11.50, lowStockThreshold: 8, category: 'Garden', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Decorative planter made from waste materials' },
+      { id: 'inv_012', name: 'Recycled Notebook', quantity: 30, price: 5.25, lowStockThreshold: 15, category: 'Stationery', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Notebook made from recycled paper and plastic cover' },
     ]
   },
   {
@@ -122,9 +122,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 50, // 50 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 180,
     inventory: [
-      { id: 'inv_013', name: 'Jasmine Rice (5kg)', quantity: 22, price: 245, lowStockThreshold: 15, category: 'Rice', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Premium jasmine rice, freshly milled' },
-      { id: 'inv_014', name: 'Brown Rice (5kg)', quantity: 16, price: 280, lowStockThreshold: 8, category: 'Rice', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Nutritious brown rice with natural bran' },
-      { id: 'inv_015', name: 'Rice Flour (1kg)', quantity: 28, price: 85, lowStockThreshold: 12, category: 'Flour', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Fine rice flour for baking and cooking' },
+      { id: 'inv_013', name: 'Jasmine Rice (5kg)', quantity: 22, price: 18.50, lowStockThreshold: 15, category: 'Rice', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Premium jasmine rice, freshly milled' },
+      { id: 'inv_014', name: 'Brown Rice (5kg)', quantity: 16, price: 22.00, lowStockThreshold: 8, category: 'Rice', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Nutritious brown rice with natural bran' },
+      { id: 'inv_015', name: 'Rice Flour (1kg)', quantity: 28, price: 4.75, lowStockThreshold: 12, category: 'Flour', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Fine rice flour for baking and cooking' },
     ]
   },
   {
@@ -145,9 +145,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 35, // 35 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 240,
     inventory: [
-      { id: 'inv_016', name: 'Virgin Coconut Oil (500ml)', quantity: 15, price: 165, lowStockThreshold: 8, category: 'Oil', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Cold-pressed virgin coconut oil' },
-      { id: 'inv_017', name: 'Coconut Oil Soap', quantity: 20, price: 45, lowStockThreshold: 10, category: 'Cosmetics', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Natural soap made with coconut oil' },
-      { id: 'inv_018', name: 'Coconut Fiber Mat', quantity: 25, price: 95, lowStockThreshold: 12, category: 'Home', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Eco-friendly mat made from coconut fiber' },
+      { id: 'inv_016', name: 'Virgin Coconut Oil (500ml)', quantity: 15, price: 12.99, lowStockThreshold: 8, category: 'Oil', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Cold-pressed virgin coconut oil' },
+      { id: 'inv_017', name: 'Coconut Oil Soap', quantity: 20, price: 6.25, lowStockThreshold: 10, category: 'Cosmetics', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Natural soap made with coconut oil' },
+      { id: 'inv_018', name: 'Coconut Fiber Mat', quantity: 25, price: 15.50, lowStockThreshold: 12, category: 'Home', image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Eco-friendly mat made from coconut fiber' },
     ]
   },
   {
@@ -168,9 +168,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 25, // 25 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 90,
     inventory: [
-      { id: 'inv_019', name: 'Fresh Basil', quantity: 30, price: 25, lowStockThreshold: 15, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Organic sweet basil, freshly harvested' },
-      { id: 'inv_020', name: 'Lemongrass Bundle', quantity: 25, price: 35, lowStockThreshold: 12, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh lemongrass for cooking and tea' },
-      { id: 'inv_021', name: 'Herb Starter Kit', quantity: 15, price: 120, lowStockThreshold: 8, category: 'Garden', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete kit to start your own herb garden' },
+      { id: 'inv_019', name: 'Fresh Basil', quantity: 30, price: 3.50, lowStockThreshold: 15, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Organic sweet basil, freshly harvested' },
+      { id: 'inv_020', name: 'Lemongrass Bundle', quantity: 25, price: 4.25, lowStockThreshold: 12, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh lemongrass for cooking and tea' },
+      { id: 'inv_021', name: 'Herb Starter Kit', quantity: 15, price: 16.99, lowStockThreshold: 8, category: 'Garden', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete kit to start your own herb garden' },
     ]
   },
   {
@@ -191,9 +191,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 40, // 40 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 150,
     inventory: [
-      { id: 'inv_022', name: 'Bamboo Chair', quantity: 8, price: 850, lowStockThreshold: 3, category: 'Furniture', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Handcrafted bamboo chair with ergonomic design' },
-      { id: 'inv_023', name: 'Bamboo Table', quantity: 5, price: 1200, lowStockThreshold: 2, category: 'Furniture', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Elegant bamboo dining table for 4 people' },
-      { id: 'inv_024', name: 'Bamboo Shelf Unit', quantity: 12, price: 650, lowStockThreshold: 5, category: 'Storage', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Multi-tier bamboo shelf for home organization' },
+      { id: 'inv_022', name: 'Bamboo Chair', quantity: 8, price: 89.99, lowStockThreshold: 3, category: 'Furniture', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Handcrafted bamboo chair with ergonomic design' },
+      { id: 'inv_023', name: 'Bamboo Table', quantity: 5, price: 149.99, lowStockThreshold: 2, category: 'Furniture', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Elegant bamboo dining table for 4 people' },
+      { id: 'inv_024', name: 'Bamboo Shelf Unit', quantity: 12, price: 69.99, lowStockThreshold: 5, category: 'Storage', image: 'https://images.pexels.com/photos/4099238/pexels-photo-4099238.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Multi-tier bamboo shelf for home organization' },
     ]
   },
   {
@@ -214,9 +214,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 300, // 5 minutes ago (newest)
     lastSaleAt: Math.floor(Date.now() / 1000) - 60,
     inventory: [
-      { id: 'inv_025', name: 'Fast Charging (15min)', quantity: 200, price: 25, lowStockThreshold: 100, category: 'Services', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Quick solar-powered device charging' },
-      { id: 'inv_026', name: 'Wireless Charging Pad', quantity: 10, price: 180, lowStockThreshold: 5, category: 'Electronics', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Solar-powered wireless charging station' },
-      { id: 'inv_027', name: 'USB Cable Set', quantity: 30, price: 45, lowStockThreshold: 15, category: 'Accessories', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Universal charging cable set' },
+      { id: 'inv_025', name: 'Fast Charging (15min)', quantity: 200, price: 4.50, lowStockThreshold: 100, category: 'Services', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Quick solar-powered device charging' },
+      { id: 'inv_026', name: 'Wireless Charging Pad', quantity: 10, price: 29.99, lowStockThreshold: 5, category: 'Electronics', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Solar-powered wireless charging station' },
+      { id: 'inv_027', name: 'USB Cable Set', quantity: 30, price: 7.99, lowStockThreshold: 15, category: 'Accessories', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Universal charging cable set' },
     ]
   },
   {
@@ -237,9 +237,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 70, // 70 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 420,
     inventory: [
-      { id: 'inv_028', name: 'Upcycled Glass Vase', quantity: 18, price: 85, lowStockThreshold: 8, category: 'Decor', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Beautiful vase made from recycled glass bottles' },
-      { id: 'inv_029', name: 'Glass Candle Holder', quantity: 25, price: 55, lowStockThreshold: 12, category: 'Lighting', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Elegant candle holder from upcycled glass' },
-      { id: 'inv_030', name: 'Glass Drinking Set', quantity: 15, price: 120, lowStockThreshold: 6, category: 'Drinkware', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Set of 4 glasses made from recycled bottles' },
+      { id: 'inv_028', name: 'Upcycled Glass Vase', quantity: 18, price: 12.99, lowStockThreshold: 8, category: 'Decor', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Beautiful vase made from recycled glass bottles' },
+      { id: 'inv_029', name: 'Glass Candle Holder', quantity: 25, price: 8.50, lowStockThreshold: 12, category: 'Lighting', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Elegant candle holder from upcycled glass' },
+      { id: 'inv_030', name: 'Glass Drinking Set', quantity: 15, price: 19.99, lowStockThreshold: 6, category: 'Drinkware', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Set of 4 glasses made from recycled bottles' },
     ]
   },
   {
@@ -260,9 +260,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 45, // 45 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 180,
     inventory: [
-      { id: 'inv_031', name: 'Ocean Plastic Backpack', quantity: 12, price: 180, lowStockThreshold: 5, category: 'Bags', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Durable backpack made from recycled ocean plastic' },
-      { id: 'inv_032', name: 'Recycled Phone Case', quantity: 30, price: 45, lowStockThreshold: 15, category: 'Electronics', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Protective phone case from ocean plastic waste' },
-      { id: 'inv_033', name: 'Eco Water Bottle', quantity: 25, price: 65, lowStockThreshold: 10, category: 'Drinkware', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Reusable water bottle from recycled materials' },
+      { id: 'inv_031', name: 'Ocean Plastic Backpack', quantity: 12, price: 34.99, lowStockThreshold: 5, category: 'Bags', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Durable backpack made from recycled ocean plastic' },
+      { id: 'inv_032', name: 'Recycled Phone Case', quantity: 30, price: 12.50, lowStockThreshold: 15, category: 'Electronics', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Protective phone case from ocean plastic waste' },
+      { id: 'inv_033', name: 'Eco Water Bottle', quantity: 25, price: 16.99, lowStockThreshold: 10, category: 'Drinkware', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Reusable water bottle from recycled materials' },
     ]
   },
   {
@@ -283,9 +283,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 60, // 60 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 240,
     inventory: [
-      { id: 'inv_034', name: 'Microgreens Mix', quantity: 40, price: 25, lowStockThreshold: 20, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh microgreens grown in vertical farms' },
-      { id: 'inv_035', name: 'Hydroponic Lettuce', quantity: 18, price: 35, lowStockThreshold: 8, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Crisp lettuce grown without soil' },
-      { id: 'inv_036', name: 'Vertical Farm Kit', quantity: 8, price: 250, lowStockThreshold: 3, category: 'Gardening', image: 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete vertical farming setup for homes' },
+      { id: 'inv_034', name: 'Microgreens Mix', quantity: 40, price: 4.99, lowStockThreshold: 20, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh microgreens grown in vertical farms' },
+      { id: 'inv_035', name: 'Hydroponic Lettuce', quantity: 18, price: 3.75, lowStockThreshold: 8, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Crisp lettuce grown without soil' },
+      { id: 'inv_036', name: 'Vertical Farm Kit', quantity: 8, price: 89.99, lowStockThreshold: 3, category: 'Gardening', image: 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete vertical farming setup for homes' },
     ]
   },
   {
@@ -306,9 +306,9 @@ export const mockShops: Shop[] = [
     registeredAt: Math.floor(Date.now() / 1000) - 86400 * 90, // 90 days ago
     lastSaleAt: Math.floor(Date.now() / 1000) - 120,
     inventory: [
-      { id: 'inv_037', name: 'Solar Panel Kit', quantity: 15, price: 380, lowStockThreshold: 5, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete solar panel system for homes' },
-      { id: 'inv_038', name: 'Wind Turbine Mini', quantity: 8, price: 550, lowStockThreshold: 3, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Small wind turbine for residential use' },
-      { id: 'inv_039', name: 'Energy Storage Battery', quantity: 12, price: 420, lowStockThreshold: 4, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Rechargeable battery for renewable energy storage' },
+      { id: 'inv_037', name: 'Solar Panel Kit', quantity: 15, price: 199.99, lowStockThreshold: 5, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Complete solar panel system for homes' },
+      { id: 'inv_038', name: 'Wind Turbine Mini', quantity: 8, price: 299.99, lowStockThreshold: 3, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Small wind turbine for residential use' },
+      { id: 'inv_039', name: 'Energy Storage Battery', quantity: 12, price: 149.99, lowStockThreshold: 4, category: 'Energy', image: 'https://images.pexels.com/photos/3962285/pexels-photo-3962285.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Rechargeable battery for renewable energy storage' },
     ]
   }
 ];
@@ -373,7 +373,7 @@ export const generateMockTransactions = (): Transaction[] => {
     transactions.push({
       id: `trans_${i}`,
       shopId: String(shop.id),
-      amount: Math.floor(Math.random() * 500) + 50,
+      amount: Math.floor(Math.random() * 50) + 5,
       type,
       timestamp: new Date(now - Math.random() * 3600000),
       toLocation: type === 'sale' ? GREENPOS_HQ : shop.location,

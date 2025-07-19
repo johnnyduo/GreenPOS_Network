@@ -70,7 +70,7 @@ export const RestockModal: React.FC<RestockModalProps> = ({
 
   const calculateTotal = () => {
     const itemsTotal = restockItems.reduce((total, item) => total + (item.cost * item.quantity), 0);
-    const deliveryFee = deliveryMethod === 'express' ? 150 : deliveryMethod === 'priority' ? 300 : 50;
+    const deliveryFee = deliveryMethod === 'express' ? 15 : deliveryMethod === 'priority' ? 25 : 8;
     return itemsTotal + deliveryFee;
   };
 
@@ -216,7 +216,7 @@ export const RestockModal: React.FC<RestockModalProps> = ({
                       >
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-800 truncate">{item.name}</p>
-                          <p className="text-sm text-gray-600">฿{item.cost} per unit</p>
+                          <p className="text-sm text-gray-600">${item.cost} per unit</p>
                           
                           <div className="flex items-center gap-2 mt-2">
                             <button
@@ -244,7 +244,7 @@ export const RestockModal: React.FC<RestockModalProps> = ({
                         </div>
                         <div className="text-right ml-4">
                           <p className="font-bold text-blue-600">
-                            ฿{(item.cost * item.quantity).toLocaleString()}
+                            ${(item.cost * item.quantity).toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -267,7 +267,7 @@ export const RestockModal: React.FC<RestockModalProps> = ({
                       />
                       <div className="flex-1">
                         <p className="font-medium">Standard Delivery</p>
-                        <p className="text-sm text-gray-600">3-5 days • ฿50</p>
+                        <p className="text-sm text-gray-600">3-5 days • $8</p>
                       </div>
                     </label>
                     
@@ -282,7 +282,7 @@ export const RestockModal: React.FC<RestockModalProps> = ({
                       />
                       <div className="flex-1">
                         <p className="font-medium">Express Delivery</p>
-                        <p className="text-sm text-gray-600">1-2 days • ฿150</p>
+                        <p className="text-sm text-gray-600">1-2 days • $15</p>
                       </div>
                     </label>
                     
@@ -297,7 +297,7 @@ export const RestockModal: React.FC<RestockModalProps> = ({
                       />
                       <div className="flex-1">
                         <p className="font-medium">Priority Delivery</p>
-                        <p className="text-sm text-gray-600">Same day • ฿300</p>
+                        <p className="text-sm text-gray-600">Same day • $25</p>
                       </div>
                     </label>
                   </div>
@@ -309,15 +309,15 @@ export const RestockModal: React.FC<RestockModalProps> = ({
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Items ({restockItems.length})</span>
-                      <span>฿{restockItems.reduce((sum, item) => sum + (item.cost * item.quantity), 0).toLocaleString()}</span>
+                      <span>${restockItems.reduce((sum, item) => sum + (item.cost * item.quantity), 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Delivery ({getDeliveryTime()})</span>
-                      <span>฿{deliveryMethod === 'express' ? '150' : deliveryMethod === 'priority' ? '300' : '50'}</span>
+                      <span>${deliveryMethod === 'express' ? '15' : deliveryMethod === 'priority' ? '25' : '8'}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between font-bold">
                       <span>Total</span>
-                      <span>฿{calculateTotal().toLocaleString()}</span>
+                      <span>${calculateTotal().toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

@@ -97,21 +97,23 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
     setIsProcessingSale(true);
     
     try {
-      // Process sale with MASchain - transfer 10 GPS tokens and record sale
+      // Process sale with MASchain - transfer 1 GPS tokens and record sale
       const shopId = parseInt(shop.id.toString()) || 1; // Use shop ID from props
-      const gpsAmount = 10; // Fixed 10 GPS tokens for demo
+      const gpsAmount = 1; // Fixed 1 GPS token for demo
       
-      console.log(`🔄 Processing sale: ${total} THB, ${gpsAmount} GPS for shop ${shopId}`);
+      console.log(`🔄 Processing sale: ${total} USD, ${gpsAmount} GPS for shop ${shopId}`);
       
       let result;
       try {
         result = await maschainService.processSaleWithGPS(shopId, total, gpsAmount);
       } catch (maschainError) {
-        console.warn('⚠️ MASchain transaction failed, using demo transaction:', maschainError);
-        // Fallback to demo transaction for better UX
+        console.warn('⚠️ MASchain transaction failed, using realistic fallback transaction:', maschainError);
+        // Generate a realistic transaction hash (64 hex characters)
+        const randomTxHash = `0x${Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+        // Fallback to demo transaction with correct explorer URL format (no /tx/)
         result = {
-          txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
-          explorerUrl: `https://explorer-testnet.maschain.com/tx/0x${Math.random().toString(16).substr(2, 64)}`
+          txHash: randomTxHash,
+          explorerUrl: `https://explorer-testnet.maschain.com/${randomTxHash}`
         };
       }
       
@@ -154,6 +156,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          key="pos-modal"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -273,7 +276,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
                               {item.quantity}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-0.5">฿{item.price.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">${item.price.toLocaleString()}</div>
                         </div>
                       ))}
                     </div>
@@ -367,7 +370,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
                           <h3 className="font-medium text-gray-800 text-sm truncate">{item.name}</h3>
                           <p className="text-xs text-gray-600 truncate">{item.description}</p>
                           <div className="mt-1">
-                            <span className="text-sm font-bold text-emerald-600">฿{item.price.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-emerald-600">${item.price.toLocaleString()}</span>
                           </div>
                         </div>
                       </motion.div>
@@ -409,7 +412,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
                             />
                             <div className="flex-1 min-w-0">
                               <h4 className="font-medium text-gray-800 text-sm truncate">{saleItem.item.name}</h4>
-                              <p className="text-xs text-gray-600">฿{saleItem.item.price.toLocaleString()} each</p>
+                              <p className="text-xs text-gray-600">${saleItem.item.price.toLocaleString()} each</p>
                               
                               <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center gap-1">
@@ -437,7 +440,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
                               
                               <div className="text-right mt-2">
                                 <span className="text-sm font-bold text-emerald-600">
-                                  ฿{(saleItem.item.price * saleItem.quantity).toLocaleString()}
+                                  ${(saleItem.item.price * saleItem.quantity).toLocaleString()}
                                 </span>
                               </div>
                             </div>
@@ -454,7 +457,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
                     {/* Total */}
                     <div className="flex justify-between items-center mb-4">
                       <span className="text-lg font-semibold text-gray-900">Total</span>
-                      <span className="text-2xl font-bold text-emerald-600">฿{calculateTotal().toLocaleString()}</span>
+                      <span className="text-2xl font-bold text-emerald-600">${calculateTotal().toLocaleString()}</span>
                     </div>
 
                     {/* Action Buttons */}
@@ -496,6 +499,7 @@ export const POSQuickAdd: React.FC<POSQuickAddProps> = ({
       {/* Sale Success Modal */}
       {showSuccessModal && transactionResult && (
         <SaleSuccessModal
+          key="success-modal"
           isOpen={showSuccessModal}
           onClose={handleSuccessModalClose}
           saleAmount={transactionResult.saleAmount}

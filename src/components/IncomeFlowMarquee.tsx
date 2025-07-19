@@ -97,7 +97,7 @@ export const IncomeFlowMarquee: React.FC<IncomeFlowMarqueeProps> = ({
               animate={{ color: ['#ffffff', '#fbbf24', '#ffffff'] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              +฿{item.amount.toLocaleString()}
+              +${item.amount.toLocaleString()}
             </motion.span>
             <span className="text-xs opacity-80">
               {item.type === 'sale' ? '💰 Sale' : '💎 Funding'}

@@ -119,15 +119,15 @@ export const FundingModal: React.FC<FundingModalProps> = ({
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-sm text-gray-600">Monthly Revenue</p>
-                  <p className="text-lg font-bold text-gray-800">฿{shop.revenue.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-800">${shop.revenue.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Current Funding</p>
-                  <p className="text-lg font-bold text-emerald-600">฿{shop.totalFunded.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-emerald-600">${shop.totalFunded.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Funding Goal</p>
-                  <p className="text-lg font-bold text-blue-600">฿{shop.fundingNeeded.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-blue-600">${shop.fundingNeeded.toLocaleString()}</p>
                 </div>
               </div>
 
@@ -175,7 +175,7 @@ export const FundingModal: React.FC<FundingModalProps> = ({
                     onClick={() => setFundingAmount(amount)}
                     className="py-2 px-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    ฿{amount.toLocaleString()}
+                    ${amount.toLocaleString()}
                   </button>
                 ))}
               </div>
@@ -195,7 +195,7 @@ export const FundingModal: React.FC<FundingModalProps> = ({
                 <div>
                   <p className="text-emerald-700">Monthly Returns</p>
                   <p className="text-xl font-bold text-emerald-800">
-                    ฿{Math.round((fundingAmount * projectedROI) / 100 / 12).toLocaleString()}
+                    ${Math.round((fundingAmount * projectedROI) / 100 / 12).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -259,7 +259,7 @@ export const FundingModal: React.FC<FundingModalProps> = ({
                 ) : (
                   <>
                     <DollarSign className="w-4 h-4" />
-                    Invest ฿{fundingAmount.toLocaleString()}
+                    Invest ${fundingAmount.toLocaleString()}
                   </>
                 )}
               </button>

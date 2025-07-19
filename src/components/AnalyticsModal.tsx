@@ -133,7 +133,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                         <div>
                           <p className="text-sm text-emerald-700">Total Sales</p>
                           <p className="text-2xl font-bold text-emerald-800">
-                            ฿{analyticsData.totalSales.toLocaleString()}
+                            ${analyticsData.totalSales.toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -151,7 +151,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                         <div>
                           <p className="text-sm text-blue-700">Avg Order Value</p>
                           <p className="text-2xl font-bold text-blue-800">
-                            ฿{analyticsData.averageOrderValue.toFixed(0)}
+                            ${analyticsData.averageOrderValue.toFixed(0)}
                           </p>
                         </div>
                       </div>
@@ -212,7 +212,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                             />
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-800 truncate">{item.name}</p>
-                              <p className="text-sm text-gray-600">฿{item.price}</p>
+                              <p className="text-sm text-gray-600">${item.price}</p>
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-emerald-600">{Math.floor(Math.random() * 50) + 10} sold</p>
@@ -274,7 +274,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Total Value</span>
                           <span className="font-bold text-gray-800">
-                            ฿{shop.inventory.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()}
+                            ${shop.inventory.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()}
                           </span>
                         </div>
                       </div>

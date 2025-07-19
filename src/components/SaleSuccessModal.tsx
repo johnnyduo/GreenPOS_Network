@@ -79,7 +79,7 @@ export const SaleSuccessModal: React.FC<SaleSuccessModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Sale Amount:</span>
-                <span className="font-bold text-emerald-600">฿{saleAmount.toLocaleString()}</span>
+                <span className="font-bold text-emerald-600">${saleAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>

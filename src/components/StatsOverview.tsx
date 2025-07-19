@@ -34,7 +34,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
     {
       icon: DollarSign,
       label: 'Monthly Revenue',
-      value: `฿${totalRevenue.toLocaleString()}`,
+      value: `$${totalRevenue.toLocaleString()}`,
       color: 'blue',
       bgColor: 'blue-50',
       textColor: 'blue-700',
@@ -44,7 +44,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
     {
       icon: TrendingUp,
       label: 'Total Funding',
-      value: `฿${totalFunding.toLocaleString()}`,
+      value: `$${totalFunding.toLocaleString()}`,
       color: 'purple',
       bgColor: 'purple-50',
       textColor: 'purple-700',

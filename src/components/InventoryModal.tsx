@@ -160,7 +160,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
                       {/* Price Control */}
                       <div className="text-center">
-                        <label className="text-xs text-gray-600 block mb-1">Price (฿)</label>
+                        <label className="text-xs text-gray-600 block mb-1">Price ($)</label>
                         <input
                           type="number"
                           value={item.price}

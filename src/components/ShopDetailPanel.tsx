@@ -75,7 +75,7 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
                 <TrendingUp className="w-5 h-5 text-emerald-600" />
                 <span className="text-sm text-emerald-700">Revenue</span>
               </div>
-              <p className="text-2xl font-bold text-emerald-800">฿{shop.revenue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-emerald-800">${shop.revenue.toLocaleString()}</p>
               <p className="text-xs text-emerald-600">This month</p>
             </div>
 
@@ -106,8 +106,8 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
             </div>
             
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">฿{shop.totalFunded.toLocaleString()} funded</span>
-              <span className="text-gray-800 font-medium">฿{shop.fundingNeeded.toLocaleString()} goal</span>
+              <span className="text-gray-600">${shop.totalFunded.toLocaleString()} funded</span>
+              <span className="text-gray-800 font-medium">${shop.fundingNeeded.toLocaleString()} goal</span>
             </div>
           </div>
 
@@ -143,7 +143,7 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
                     <p className="text-sm text-gray-600 truncate">{item.category}</p>
                   </div>
                   <div className="text-right ml-4">
-                    <p className="text-gray-800 font-bold">฿{item.price}</p>
+                    <p className="text-gray-800 font-bold">${item.price}</p>
                     <p className={`text-sm ${item.quantity <= item.lowStockThreshold ? 'text-red-600' : 'text-gray-600'}`}>
                       {item.quantity} in stock
                     </p>
