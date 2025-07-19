@@ -39,7 +39,9 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
                 <MapPin className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm truncate">{shop.country}</span>
               </div>
-              <p className="text-sm text-gray-500 mt-1 truncate">Owner: {shop.owner}</p>
+              <p className="text-sm text-gray-500 mt-1 truncate">
+                Owner: {shop.owner.slice(0, 6)}...{shop.owner.slice(-4)}
+              </p>
             </div>
             <button
               onClick={onClose}
@@ -54,7 +56,7 @@ export const ShopDetailPanel: React.FC<ShopDetailPanelProps> = ({
             <h3 className="text-lg font-semibold text-gray-800 mb-3">Live Frontstore Camera</h3>
             <div className="relative rounded-xl overflow-hidden">
               <img
-                src={shop.liveStream}
+                src="https://solink.com/wp-content/uploads/2022/06/360-camera-solink-view.gif"
                 alt="Shop live feed"
                 className="w-full h-48 object-cover"
               />
