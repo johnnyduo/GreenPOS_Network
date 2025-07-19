@@ -337,12 +337,12 @@ export class MASChainService {
 
     switch (methodName) {
       case 'registerShop':
-        // MASchain API expects parameters WITH underscores based on the ABI
+        // MASchain API expects parameters matching the ABI parameter names
         mappedParams = {
-          '_name': args[0],
-          '_category': parseInt(args[1].toString()),
-          '_location': args[2], 
-          '_fundingNeeded': args[3].toString()
+          'name': args[0],
+          'category': parseInt(args[1].toString()),
+          'location': args[2], 
+          'fundingNeeded': args[3].toString()
         };
         break;
       

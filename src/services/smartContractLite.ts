@@ -501,18 +501,24 @@ export class SmartContractServiceLite {
     try {
       console.log('🔄 Registering shop with direct MASchain API...', shopData);
       
-      // Ensure funding goal is always 100 GPS (100 * 10^18 wei)
-      const fundingNeededWei = (100 * Math.pow(10, 18)).toString();
+      // Convert user's funding goal to wei (18 decimals) - use BigInt to avoid scientific notation
+      const fundingNeededWei = (BigInt(shopData.fundingNeeded) * BigInt(10 ** 18)).toString();
+      
+      console.log('💰 Funding conversion:', {
+        userAmount: shopData.fundingNeeded,
+        weiAmount: fundingNeededWei,
+        isValidAmount: shopData.fundingNeeded >= 100 && shopData.fundingNeeded <= 1000000
+      });
       
       // Use the same format as other contract methods
       const result = await maschainService.executeContract(
         this.contractAddress,
         'registerShop',
         [
-          shopData.name,
+          shopData.name.trim(),
           shopData.category,
-          shopData.location,
-          fundingNeededWei // Always 100 GPS
+          shopData.location.trim(),
+          fundingNeededWei
         ],
         true // Include ABI for contract writes
       );
@@ -1316,16 +1322,31 @@ export class SmartContractServiceLite {
    */
   async getShopCount(): Promise<number> {
     try {
+      console.log('🔍 DEBUG: Getting shop count from contract...');
+      console.log('🔍 Contract Address:', this.contractAddress);
+      console.log('🔍 Wallet Address:', this.walletAddress || '0x1154dfA292A59A003ADF3a820dfc98ddbD273FeD');
+      
       const params = {
         from: this.walletAddress || '0x1154dfA292A59A003ADF3a820dfc98ddbD273FeD',
         method_name: 'shopCounter',
         params: {}
       };
 
+      console.log('🔍 Calling contract with params:', params);
       const result = await maschainService.callContract(this.contractAddress, params);
-      return parseInt(result.toString(), 10);
+      const shopCount = parseInt(result.toString(), 10);
+      
+      console.log('🔍 Raw result from contract:', result);
+      console.log('🔍 Parsed shop count:', shopCount);
+      
+      return shopCount;
     } catch (error: any) {
-      console.error('Failed to get shop count:', error);
+      console.error('❌ Failed to get shop count:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        contractAddress: this.contractAddress
+      });
       return 0;
     }
   }
@@ -2084,6 +2105,7 @@ export class SmartContractServiceLite {
       
       // Step 1: Get shop count with caching
       const shopCount = await this.getShopCountCached();
+      console.log(`📊 Got shop count: ${shopCount}`);
       
       if (shopCount === 0) {
         console.log('⚠️ No shops registered in contract yet');
@@ -2098,6 +2120,8 @@ export class SmartContractServiceLite {
         const batch = Array.from({ length: Math.min(this.BATCH_SIZE, shopCount - i) }, (_, j) => i + j);
         batches.push(batch);
       }
+      
+      console.log(`🔧 Created ${batches.length} batches:`, batches);
       
       // Step 3: Process batches with some parallelism but not overwhelming the API
       const allShops: any[] = [];
@@ -2199,13 +2223,15 @@ export class SmartContractServiceLite {
         
         const shopData = await Promise.race([shopPromise, timeoutPromise]);
         
+        console.log(`🏪 Shop ${shopId} raw data from blockchain:`, shopData);
         console.log(`🏪 Shop ${shopId} fetch result:`, {
           hasData: !!shopData,
           name: shopData?.name,
           owner: shopData?.owner,
           isActive: shopData?.isActive,
           fundingNeeded: shopData?.fundingNeeded,
-          totalFunded: shopData?.totalFunded
+          totalFunded: shopData?.totalFunded,
+          fullData: shopData
         });
         
         if (shopData) {
@@ -2267,7 +2293,7 @@ export class SmartContractServiceLite {
       totalFunded,
       sustainabilityScore: parseInt(shopData.sustainabilityScore) || 85,
       isActive: true, // Always show as active for investment dashboard
-      registeredAt: parseInt(shopData.registeredAt) || Date.now(),
+      registeredAt: parseInt(shopData.registeredAt) || Math.floor(Date.now() / 1000),
       lastSaleAt: 0,
       stockHealth: 0.85,
       lastSale: new Date(),
@@ -2524,8 +2550,8 @@ export class SmartContractServiceLite {
         totalFunded: 18000,
         sustainabilityScore: 92,
         isActive: true,
-        registeredAt: Date.now() - 86400000 * 30,
-        lastSaleAt: Date.now() - 3600000,
+        registeredAt: Math.floor(Date.now() / 1000) - 86400 * 30,
+        lastSaleAt: Math.floor(Date.now() / 1000) - 3600,
         stockHealth: 0.85,
         lastSale: new Date(Date.now() - 3600000),
         liveStream: 'https://example.com/stream1',
@@ -2545,8 +2571,8 @@ export class SmartContractServiceLite {
         totalFunded: 12000,
         sustainabilityScore: 88,
         isActive: true,
-        registeredAt: Date.now() - 86400000 * 25,
-        lastSaleAt: Date.now() - 7200000,
+        registeredAt: Math.floor(Date.now() / 1000) - 86400 * 25,
+        lastSaleAt: Math.floor(Date.now() / 1000) - 7200,
         stockHealth: 0.70,
         lastSale: new Date(Date.now() - 7200000),
         liveStream: 'https://example.com/stream2',
@@ -2566,8 +2592,8 @@ export class SmartContractServiceLite {
         totalFunded: 25000,
         sustainabilityScore: 95,
         isActive: true,
-        registeredAt: Date.now() - 86400000 * 20,
-        lastSaleAt: Date.now() - 1800000,
+        registeredAt: Math.floor(Date.now() / 1000) - 86400 * 20,
+        lastSaleAt: Math.floor(Date.now() / 1000) - 1800,
         stockHealth: 0.90,
         lastSale: new Date(Date.now() - 1800000),
         liveStream: 'https://example.com/stream3',

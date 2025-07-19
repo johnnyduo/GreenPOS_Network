@@ -7,6 +7,7 @@ import MASChainWalletConnection from './MASChainWalletConnection';
 import SmartContractFundingModal from './SmartContractFundingModal';
 import { MintSuccessModal } from './MintSuccessModal';
 import { ShopRegistrationSuccessModal } from './ShopRegistrationSuccessModal';
+import { ShopRegistrationModal, ShopRegistrationData } from './ShopRegistrationModal';
 import { smartContractService, GPSTokenInfo } from '../services/smartContractLite';
 import { shopFundingService } from '../services/shopFunding';
 import { virtualShopMapping } from '../services/virtualShopMapping';
@@ -69,6 +70,27 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
     isRealTransaction: false,
     shopId: ''
   });
+
+  // New shop registration modal state
+  const [isShopRegistrationModalOpen, setIsShopRegistrationModalOpen] = useState(false);
+
+  // Handle successful shop registration
+  const handleShopRegistrationSuccess = (shopData: ShopRegistrationData, transactionHash: string, shopId: string) => {
+    const isRealTx = transactionHash && transactionHash !== 'Success' && transactionHash.startsWith('0x') && transactionHash.length === 66;
+    const explorerUrl = isRealTx ? `https://explorer-testnet.maschain.com/${transactionHash}` : '';
+    
+    setShopRegistrationModal({
+      isOpen: true,
+      shopName: shopData.name,
+      category: getCategoryName(shopData.category),
+      location: shopData.location,
+      fundingGoal: shopData.fundingNeeded,
+      transactionHash: transactionHash,
+      explorerUrl: explorerUrl,
+      isRealTransaction: !!isRealTx,
+      shopId: shopId
+    });
+  };
 
   // Load real shops from blockchain instead of mock data
   useEffect(() => {
@@ -1226,146 +1248,9 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Actions</p>
                   <button
-                    onClick={async (event) => {
-                      if (!isWalletConnected) {
-                        alert('Please connect your wallet first');
-                        return;
-                      }
-                      
-                      // Show loading state
-                      const button = event.target as HTMLButtonElement;
-                      const originalText = button.textContent;
-                      button.disabled = true;
-                      button.textContent = '⏳ Registering...';
-                      
-                      try {
-                        console.log('🏪 Using WORKING registration method...');
-                        
-                        // Use the WORKING direct registration method with main contract
-                        const apiUrl = config.maschain.apiUrl;
-                        const contractAddress = config.maschain.contractAddress; // Use new GreenPOSNetworkFix contract
-                        const walletAddress = config.maschain.walletAddress;
-                        const clientId = config.maschain.clientId;
-                        const clientSecret = config.maschain.clientSecret;
-
-                        const result = await fetch(`${apiUrl}/api/contract/smart-contracts/${contractAddress}/execute`, {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'client_id': clientId,
-                            'client_secret': clientSecret
-                          },
-                          body: JSON.stringify({
-                            wallet_options: {
-                              type: "organisation",
-                              address: walletAddress
-                            },
-                            method_name: 'registerShop',
-                            params: {
-                              name: 'Green Valley Organic Farm ' + Date.now(),
-                              category: 0,
-                              location: 'Thailand',
-                              fundingNeeded: (100 * Math.pow(10, 18)).toString() // Minimum required: 100 tokens
-                            }
-                          })
-                        });
-                        
-                        const responseText = await result.text();
-                        console.log('🎉 WORKING REGISTRATION RESULT:', {
-                          status: result.status,
-                          statusText: result.statusText,
-                          body: responseText
-                        });
-                        
-                        if (result.ok) {
-                          try {
-                            const data = JSON.parse(responseText);
-                            console.log('📋 Full registration response data:', data);
-                            
-                            const txHash = data.result?.transaction_hash || 'Success';
-                            
-                            // Try to extract shop ID from various possible locations in the response
-                            let shopId = 'Unknown';
-                            if (data.result) {
-                              shopId = data.result.shop_id || 
-                                       data.result.shopId || 
-                                       data.result.id || 
-                                       data.result.shop_index ||
-                                       data.result.returnValues?.shop_id ||
-                                       data.result.returnValues?.shopId ||
-                                       'Unknown';
-                            }
-                            
-                            // If still unknown, try to extract from transaction logs or events
-                            if (shopId === 'Unknown' && data.result?.logs) {
-                              const shopRegisteredEvent = data.result.logs.find((log: any) => 
-                                log.event === 'ShopRegistered' || log.topics?.[0]?.includes('ShopRegistered')
-                              );
-                              if (shopRegisteredEvent) {
-                                shopId = shopRegisteredEvent.returnValues?.shopId || 
-                                        shopRegisteredEvent.returnValues?.shop_id ||
-                                        shopRegisteredEvent.args?.[0] || 'Unknown';
-                              }
-                            }
-                            
-                            console.log('🆔 Extracted Shop ID:', shopId);
-                            
-                            // Success feedback
-                            button.textContent = '✅ Success!';
-                            button.className = button.className.replace('bg-emerald-500 hover:bg-emerald-600', 'bg-green-500');
-                            
-                            // Check if it's a real blockchain transaction
-                            const isRealTx = txHash && txHash !== 'Success' && txHash.startsWith('0x') && txHash.length === 66;
-                            
-                            // Use correct MASchain explorer URL format (without /tx/)
-                            const explorerUrl = isRealTx ? `https://explorer-testnet.maschain.com/${txHash}` : '';
-                            
-                            // Extract shop ID from response if available
-                            console.log('🆔 Shop ID from registration:', shopId);
-                            
-                            // Show the success modal instead of alert
-                            setShopRegistrationModal({
-                              isOpen: true,
-                              shopName: 'Green Valley Organic Farm',
-                              category: 'Agriculture',
-                              location: 'Thailand',
-                              fundingGoal: 100,
-                              transactionHash: txHash || '',
-                              explorerUrl: explorerUrl,
-                              isRealTransaction: isRealTx,
-                              shopId: String(shopId)
-                            });
-                            
-                          } catch {
-                            // Fallback success modal for parsing errors
-                            setShopRegistrationModal({
-                              isOpen: true,
-                              shopName: 'Green Valley Organic Farm',
-                              category: 'Agriculture',
-                              location: 'Thailand',
-                              fundingGoal: 100,
-                              transactionHash: '',
-                              explorerUrl: '',
-                              isRealTransaction: false,
-                              shopId: 'Unknown'
-                            });
-                          }
-                        } else {
-                          throw new Error(`Registration failed: ${result.status} - ${responseText}`);
-                        }
-                        
-                      } catch (error: any) {
-                        console.error('❌ Shop registration failed:', error);
-                        
-                        // Reset button state
-                        button.disabled = false;
-                        button.textContent = originalText;
-                        button.className = button.className.replace('bg-green-500', 'bg-emerald-500 hover:bg-emerald-600');
-                        
-                        alert(`❌ Shop Registration Failed\n\nError: ${error.message || 'Unknown error'}\n\nPlease try again in a few moments.`);
-                      }
-                    }}
+                    onClick={() => setIsShopRegistrationModalOpen(true)}
                     className="mt-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!isWalletConnected}
                   >
                     Register New Shop
                   </button>
@@ -1587,6 +1472,14 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
         transactionHash={mintSuccessModal.transactionHash}
         explorerUrl={mintSuccessModal.explorerUrl}
         isRealTransaction={mintSuccessModal.isRealTransaction}
+      />
+
+      {/* Shop Registration Modal */}
+      <ShopRegistrationModal
+        isOpen={isShopRegistrationModalOpen}
+        onClose={() => setIsShopRegistrationModalOpen(false)}
+        onSuccess={handleShopRegistrationSuccess}
+        isWalletConnected={isWalletConnected}
       />
 
       {/* Shop Registration Success Modal */}

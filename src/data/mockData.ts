@@ -27,7 +27,7 @@ export const mockShops: Shop[] = [
     totalFunded: 3200,
     sustainabilityScore: 85,
     isActive: true,
-    registeredAt: Math.floor(Date.now() / 1000) - 86400 * 30, // 30 days ago
+    registeredAt: Math.floor(Date.now() / 1000) - 3600 * 2, // 2 hours ago (most recent)
     lastSaleAt: Math.floor(Date.now() / 1000),
     inventory: [
       { id: 'inv_001', name: 'Organic Tomatoes', quantity: 25, price: 35, lowStockThreshold: 10, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh organic tomatoes grown without pesticides' },
@@ -211,7 +211,7 @@ export const mockShops: Shop[] = [
     totalFunded: 3800,
     sustainabilityScore: 94,
     isActive: true,
-    registeredAt: Math.floor(Date.now() / 1000) - 86400 * 15, // 15 days ago
+    registeredAt: Math.floor(Date.now() / 1000) - 300, // 5 minutes ago (newest)
     lastSaleAt: Math.floor(Date.now() / 1000) - 60,
     inventory: [
       { id: 'inv_025', name: 'Fast Charging (15min)', quantity: 200, price: 25, lowStockThreshold: 100, category: 'Services', image: 'https://images.pexels.com/photos/163016/mobile-phone-android-apps-phone-163016.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Quick solar-powered device charging' },
