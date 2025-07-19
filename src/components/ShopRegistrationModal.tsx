@@ -91,18 +91,24 @@ export const ShopRegistrationModal: React.FC<ShopRegistrationModalProps> = ({
     try {
       console.log('🏪 Registering shop with form data:', formData);
       
+      // 🚀 REAL SHOP ID: Get current shop count from blockchain to generate proper ID
+      let realShopId = `shop_${Date.now()}`; // Fallback ID
+      
+      try {
+        const currentShopCount = await smartContractService.getShopCount();
+        realShopId = currentShopCount.toString(); // Use actual next shop ID (0-indexed)
+        console.log(`� Real Shop ID from blockchain: ${realShopId} (next shop after ${currentShopCount - 1})`);
+      } catch (countError) {
+        console.warn('⚠️ Could not get real shop count, using fallback ID:', countError);
+      }
+      
       // Use the smart contract service instead of direct API calls
       const txHash = await smartContractService.registerShop(formData);
       
-      console.log('🎉 Shop registration successful:', { txHash });
+      console.log('� Shop registration successful:', { txHash, shopId: realShopId });
       
-      // Try to extract shop ID - for now we'll generate one since the service doesn't return it
-      const shopId = `shop_${Date.now()}`;
-      
-      console.log('🆔 Generated Shop ID:', shopId);
-      
-      // Success callback
-      onSuccess(formData, txHash, shopId);
+      // Success callback with real shop ID
+      onSuccess(formData, txHash, realShopId);
       
       // Reset form
       setFormData({

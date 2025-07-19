@@ -183,7 +183,7 @@ function App() {
                         {shops.length} Total
                       </span>
                       <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                        HQ: Bangkok
+                        Data Collection: GreenPOS
                       </span>
                     </div>
                   </div>

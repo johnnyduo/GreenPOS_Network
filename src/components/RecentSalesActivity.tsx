@@ -98,7 +98,9 @@ export const RecentSalesActivity: React.FC<RecentSalesActivityProps> = ({
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-800">Live Revenue Streams</h3>
-            <p className="text-sm text-gray-600">Real-time sales flowing to GreenPOS On-Chain Protocol</p>
+            <p className="text-sm text-gray-600">
+              Real-time sales flowing to GreenPOS On-Chain Protocol • {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+            </p>
           </div>
         </div>
         

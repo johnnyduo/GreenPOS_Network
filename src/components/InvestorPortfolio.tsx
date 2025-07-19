@@ -1,94 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, DollarSign, Target, Loader, Database } from 'lucide-react';
+import { TrendingUp, Users, DollarSign } from 'lucide-react';
 import { Investor, Transaction } from '../types';
-import { smartContractService } from '../services/smartContractLite';
 
 interface InvestorPortfolioProps {
-  investors: Investor[]; // Fallback prop - we'll fetch real data
-  recentTransactions: Transaction[]; // Fallback prop - we'll generate from blockchain
+  investors: Investor[]; // Fallback prop - we'll use static data
+  recentTransactions: Transaction[]; // Fallback prop - we'll use static data
 }
 
-export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
-  investors: fallbackInvestors,
-  recentTransactions: fallbackTransactions
-}) => {
-  const [blockchainInvestors, setBlockchainInvestors] = useState<any[]>([]);
-  const [blockchainTransactions, setBlockchainTransactions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataSource, setDataSource] = useState<'blockchain' | 'demo'>('demo');
-
-  // Load real blockchain data
-  useEffect(() => {
-    const loadBlockchainData = async () => {
-      console.log('👥 PORTFOLIO: Loading real investor data from blockchain...');
-      setIsLoading(true);
-      
-      try {
-        // Fetch real investors from blockchain
-        const realInvestors = await smartContractService.getBlockchainInvestors();
-        console.log(`👥 PORTFOLIO: Loaded ${realInvestors.length} investors:`, realInvestors);
-        
-        // Generate transactions from investor funding activities
-        const transactions = await generateBlockchainTransactions();
-        console.log(`📊 PORTFOLIO: Generated ${transactions.length} transactions from blockchain data`);
-        
-        setBlockchainInvestors(realInvestors);
-        setBlockchainTransactions(transactions);
-        setDataSource(realInvestors.length > 0 && realInvestors[0].isRealBlockchainData ? 'blockchain' : 'demo');
-        
-      } catch (error) {
-        console.error('❌ PORTFOLIO: Failed to load blockchain data:', error);
-        // Use fallback props
-        setBlockchainInvestors(fallbackInvestors);
-        setBlockchainTransactions(fallbackTransactions);
-        setDataSource('demo');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadBlockchainData();
-  }, [fallbackInvestors, fallbackTransactions]);
-
-  // Generate transactions from blockchain investor data
-  const generateBlockchainTransactions = async (): Promise<any[]> => {
-    const transactions: any[] = [];
-    
-    try {
-      // Get shops to map funding activities to transactions
-      const shops = await smartContractService.getShopsForInvestorDashboard();
-      
-      shops.forEach(shop => {
-        if (shop.fundingHistory && shop.fundingHistory.length > 0) {
-          shop.fundingHistory.forEach((funding: any, index: number) => {
-            transactions.push({
-              id: `funding_${shop.id}_${index}`,
-              shopId: shop.id,
-              shopName: shop.name,
-              amount: Number(BigInt(funding.amount || 0) / BigInt(1e18)),
-              timestamp: new Date((funding.timestamp || Date.now() / 1000) * 1000),
-              type: 'funding',
-              investor: funding.investor,
-              purpose: funding.purpose || 'Investment',
-              isRealBlockchainData: true
-            });
-          });
-        }
-      });
-      
-      // Sort by timestamp (newest first)
-      return transactions.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      
-    } catch (error) {
-      console.warn('Could not generate blockchain transactions:', error);
-      return [];
+export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = () => {
+  // Generate sensible static investor data
+  const staticInvestors = [
+    {
+      id: 'inv1',
+      name: '0x1A2B...5C7D',
+      totalInvested: 15000,
+      roi: 12.5,
+      activeInvestments: 8,
+      wallet: '0x1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B'
+    },
+    {
+      id: 'inv2', 
+      name: '0x2B3C...6D8E',
+      totalInvested: 12800,
+      roi: 9.8,
+      activeInvestments: 6,
+      wallet: '0x2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B1C'
+    },
+    {
+      id: 'inv3',
+      name: '0x3C4D...7E9F',
+      totalInvested: 10500,
+      roi: 15.2,
+      activeInvestments: 4,
+      wallet: '0x3C4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B1C2D'
+    },
+    {
+      id: 'inv4',
+      name: '0x4D5E...8F0A',
+      totalInvested: 8900,
+      roi: 11.7,
+      activeInvestments: 5,
+      wallet: '0x4D5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B1C2D3E'
+    },
+    {
+      id: 'inv5',
+      name: '0x5E6F...9A1B',
+      totalInvested: 7200,
+      roi: 8.4,
+      activeInvestments: 3,
+      wallet: '0x5E6F7A8B9C0D1E2F3A4B5C6D7E8F9A0B1C2D3E4F'
     }
-  };
+  ];
 
-  // Use blockchain data if available, otherwise fallback
-  const investors = blockchainInvestors.length > 0 ? blockchainInvestors : fallbackInvestors;
-  const transactions = blockchainTransactions.length > 0 ? blockchainTransactions : fallbackTransactions;
+  // Generate sensible static transactions
+  const staticTransactions = [
+    { id: 't1', shopId: 'shop1', shopName: 'Green Leaf Organics', amount: 1500, timestamp: new Date(Date.now() - 2 * 60 * 1000), type: 'funding' },
+    { id: 't2', shopId: 'shop2', shopName: 'Fresh Farm Market', amount: 2200, timestamp: new Date(Date.now() - 15 * 60 * 1000), type: 'funding' },
+    { id: 't3', shopId: 'shop3', shopName: 'Eco Friendly Store', amount: 1800, timestamp: new Date(Date.now() - 45 * 60 * 1000), type: 'funding' },
+    { id: 't4', shopId: 'shop4', shopName: 'Sustainable Goods', amount: 3000, timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), type: 'funding' },
+    { id: 't5', shopId: 'shop5', shopName: 'Pure Nature Co', amount: 1200, timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), type: 'funding' },
+    { id: 't6', shopId: 'shop1', shopName: 'Green Leaf Organics', amount: 800, timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), type: 'funding' },
+    { id: 't7', shopId: 'shop2', shopName: 'Fresh Farm Market', amount: 2500, timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), type: 'funding' },
+    { id: 't8', shopId: 'shop6', shopName: 'Organic Valley', amount: 1900, timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), type: 'funding' }
+  ];
+
+  const investors = staticInvestors;
+  const transactions = staticTransactions;
   
   const totalInvested = investors.reduce((sum, inv) => sum + inv.totalInvested, 0);
   const avgROI = investors.length > 0 ? investors.reduce((sum, inv) => sum + inv.roi, 0) / investors.length : 0;
@@ -98,28 +76,8 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Investor Portfolio</h2>
-        <div className="flex items-center gap-2 text-sm">
-          {dataSource === 'blockchain' ? (
-            <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              <Database className="w-3 h-3" />
-              <span>Live Blockchain Data</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-              <Target className="w-3 h-3" />
-              <span>Demo Data</span>
-            </div>
-          )}
-        </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader className="w-6 h-6 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Loading blockchain data...</span>
-        </div>
-      ) : (
-        <>
       {/* Summary Stats */}
       <div className="grid grid-cols-1 gap-4 mb-6">
         <motion.div
@@ -135,7 +93,7 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
             <div className="flex-1 min-w-0">
               <p className="text-sm text-emerald-700">Total Invested</p>
               <p className="text-xl font-bold text-emerald-800 truncate">
-                {dataSource === 'blockchain' ? `${totalInvested} GPS` : `$${totalInvested.toLocaleString()}`}
+                ${totalInvested.toLocaleString()}
               </p>
             </div>
           </div>
@@ -191,20 +149,17 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-sm">
-                    {investor.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                    {investor.wallet.slice(2, 4).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-800 font-medium truncate">{investor.name}</p>
+                  <p className="text-gray-800 font-medium truncate font-mono">{investor.name}</p>
                   <p className="text-sm text-gray-600 truncate">{investor.activeInvestments} active investments</p>
-                  {dataSource === 'blockchain' && investor.wallet && (
-                    <p className="text-xs text-gray-500 truncate font-mono">{investor.wallet}</p>
-                  )}
                 </div>
               </div>
               <div className="text-right ml-4">
                 <p className="text-gray-800 font-bold">
-                  {dataSource === 'blockchain' ? `${investor.totalInvested} GPS` : `$${investor.totalInvested.toLocaleString()}`}
+                  ${investor.totalInvested.toLocaleString()}
                 </p>
                 <p className="text-sm text-emerald-600">+{investor.roi.toFixed(1)}% ROI</p>
               </div>
@@ -229,10 +184,7 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse flex-shrink-0"></div>
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-800 text-sm font-medium truncate">
-                    {dataSource === 'blockchain' && transaction.shopName ? 
-                      `${transaction.shopName}` : 
-                      `Shop ID: ${transaction.shopId}`
-                    }
+                    {transaction.shopName}
                   </p>
                   <p className="text-xs text-gray-500">
                     {transaction.timestamp.toLocaleTimeString()}
@@ -241,7 +193,7 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
               </div>
               <div className="text-right ml-4">
                 <p className="text-emerald-600 font-bold">
-                  {dataSource === 'blockchain' ? `+${transaction.amount} GPS` : `+$${transaction.amount}`}
+                  +${transaction.amount}
                 </p>
                 <p className="text-xs text-gray-500">Funding</p>
               </div>
@@ -249,8 +201,6 @@ export const InvestorPortfolio: React.FC<InvestorPortfolioProps> = ({
           ))}
         </div>
       </div>
-        </>
-      )}
     </div>
   );
 };

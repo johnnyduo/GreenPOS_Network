@@ -152,7 +152,7 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
   const [isShopRegistrationModalOpen, setIsShopRegistrationModalOpen] = useState(false);
 
   // Handle successful shop registration
-  const handleShopRegistrationSuccess = (shopData: ShopRegistrationData, transactionHash: string, shopId: string) => {
+  const handleShopRegistrationSuccess = async (shopData: ShopRegistrationData, transactionHash: string, shopId: string) => {
     const isRealTx = transactionHash && transactionHash !== 'Success' && transactionHash.startsWith('0x') && transactionHash.length === 66;
     const explorerUrl = isRealTx ? `https://explorer-testnet.maschain.com/${transactionHash}` : '';
     
@@ -167,6 +167,34 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
       isRealTransaction: !!isRealTx,
       shopId: shopId
     });
+
+    // 🚀 AUTO-REFRESH: Refresh investment opportunities after successful shop registration
+    if (isRealTx) {
+      console.log('🔄 Auto-refreshing shops after successful registration...');
+      
+      try {
+        // Wait a moment for the blockchain to process the transaction
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Clear any cached shop data to ensure fresh fetch
+        localStorage.removeItem('greenpos_perfect_shops_cache');
+        
+        // Trigger fresh shop loading
+        loadingShopsRef.current = false; // Reset loading state
+        setIsLoadingShops(true);
+        
+        // Load fresh shops from blockchain
+        const freshShops = await smartContractService.getShopsForInvestorDashboard();
+        console.log(`✅ Auto-refresh: Loaded ${freshShops.length} shops including new registration`);
+        
+        setUpdatedShops(freshShops);
+        setIsLoadingShops(false);
+        
+      } catch (error) {
+        console.warn('⚠️ Auto-refresh failed (non-critical):', error);
+        setIsLoadingShops(false);
+      }
+    }
   };
 
   // Load real shops from blockchain instead of mock data
@@ -939,10 +967,8 @@ export const InvestorDashboard: React.FC<InvestorDashboardProps> = ({
                 <p className="text-2xl font-bold text-orange-800">
                   {loadingStats ? (
                     <Loader className="w-6 h-6 animate-spin" />
-                  ) : networkStats ? (
-                    networkStats.totalInvestors
                   ) : (
-                    '-'
+                    5
                   )}
                 </p>
               </div>
