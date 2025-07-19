@@ -1269,7 +1269,7 @@ export class SmartContractServiceLite {
       }
 
       // Handle different possible result structures
-      let data = result.data || result;
+      const data = result.data || result;
       
       if (!data || (Array.isArray(data) && data.length === 0)) {
         console.warn('Contract returned empty data, likely fresh deployment');

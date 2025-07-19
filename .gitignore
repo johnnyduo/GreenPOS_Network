@@ -1,4 +1,6 @@
-# Logs
+# ==============================================
+# LOGS & DEBUG FILES
+# ==============================================
 logs
 *.log
 npm-debug.log*
@@ -6,48 +8,113 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+debug-*.js
+test-*.js
+test-*.mjs
+test-*.html
+test_*.js
 
-# Dependencies
-node_modules
+# ==============================================
+# DEPENDENCIES & PACKAGES
+# ==============================================
+node_modules/
 jspm_packages/
+package-lock.json
 
-# Build outputs
-dist
-dist-ssr
+# ==============================================
+# BUILD OUTPUTS & DIST
+# ==============================================
+dist/
+dist-ssr/
 build/
+coverage/
 *.local
+*.tsbuildinfo
 
-# Environment files
+# ==============================================
+# ENVIRONMENT & SECRETS
+# ==============================================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env.staging
+.env.*.local
 
-# Cache directories
-.cache
-.parcel-cache
+# ==============================================
+# CACHE & TEMPORARY FILES
+# ==============================================
+.cache/
+.parcel-cache/
 .eslintcache
 .stylelintcache
-*.tsbuildinfo
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.turbo
+*.tmp
+*.temp
 
-# Editor directories and files
+# ==============================================
+# EDITOR & IDE FILES
+# ==============================================
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*~
 
-# OS generated files
+# ==============================================
+# OS GENERATED FILES
+# ==============================================
+.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==============================================
+# BLOCKCHAIN & WALLET FILES
+# ==============================================
+keystore/
+wallet.json
+private-key.txt
+mnemonic.txt
+
+# ==============================================
+# DOCUMENTATION DRAFTS
+# ==============================================
+*.draft.md
+*_DRAFT.md
+NOTES.md
+TODO.md
+
+# ==============================================
+# BACKUP & ARCHIVE FILES
+# ==============================================
+*.bak
+*.backup
+*.orig
+*.swp
+*.swo
+
+# ==============================================
+# SENSITIVE CONFIGURATION
+# ==============================================
+config/local.js
+config/production.js
+secrets.json
 ehthumbs.db
 Thumbs.db
 

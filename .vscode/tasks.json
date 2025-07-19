@@ -1,0 +1,133 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "label": "GreenPOS: Start Development Server",
+      "command": "yarn",
+      "args": ["dev"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": [
+          {
+            "regexp": "^(ERROR|WARNING)\\s+(.*):(\\d+):(\\d+):\\s+(.*)$",
+            "severity": 1,
+            "file": 2,
+            "line": 3,
+            "column": 4,
+            "message": 5
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\s*VITE.*starting\\.\\.\\.$",
+          "endsPattern": "^\\s*➜\\s+Local:\\s+http://"
+        }
+      }
+    },
+    {
+      "type": "shell",
+      "label": "GreenPOS: Build for Production",
+      "command": "yarn",
+      "args": ["build"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "shell",
+      "label": "GreenPOS: Preview Production Build",
+      "command": "yarn",
+      "args": ["preview"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "dependsOn": "GreenPOS: Build for Production"
+    },
+    {
+      "type": "shell",
+      "label": "GreenPOS: Lint Code",
+      "command": "yarn",
+      "args": ["lint"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "shell",
+      "label": "GreenPOS: Fix Lint Issues",
+      "command": "yarn",
+      "args": ["lint:fix"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "shell",
+      "label": "GreenPOS: Type Check",
+      "command": "yarn",
+      "args": ["type-check"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "shell",
+      "label": "GreenPOS: Install Dependencies",
+      "command": "yarn",
+      "args": ["install"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    }
+  ]
+}
