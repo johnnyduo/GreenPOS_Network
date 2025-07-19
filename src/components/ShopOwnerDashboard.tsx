@@ -92,7 +92,7 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                       <TrendingUp className="w-5 h-5 text-emerald-600" />
                       <span className="text-sm text-emerald-700">Monthly Revenue</span>
                     </div>
-                    <p className="text-2xl font-bold text-emerald-800">฿{selectedShop.revenue.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-emerald-800">${selectedShop.revenue.toLocaleString()}</p>
                   </div>
 
                   <div className="bg-blue-50 rounded-xl p-4">
@@ -100,7 +100,7 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                       <ShoppingCart className="w-5 h-5 text-blue-600" />
                       <span className="text-sm text-blue-700">Today's Sales</span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-800">฿{todaysSales.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-blue-800">${todaysSales.toLocaleString()}</p>
                   </div>
 
                   <div className="bg-purple-50 rounded-xl p-4">
@@ -208,18 +208,24 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                     className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <img
-                        src={item.image || 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200'}
-                        alt={item.name}
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                        <img
+                          src={item.image || 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200'}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200';
+                          }}
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-800 truncate">{item.name}</p>
                         <p className="text-sm text-gray-600">{item.category}</p>
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-bold text-gray-800">฿{item.price}</p>
+                      <p className="font-bold text-gray-800">${item.price}</p>
                       <p className={`text-sm ${item.quantity <= item.lowStockThreshold ? 'text-red-600' : 'text-gray-600'}`}>
                         {item.quantity} in stock
                       </p>
@@ -279,7 +285,7 @@ export const ShopOwnerDashboard: React.FC<ShopOwnerDashboardProps> = ({
                           transaction.type === 'sale' ? 'text-emerald-600' : 
                           transaction.type === 'funding' ? 'text-blue-600' : 'text-orange-600'
                         }`}>
-                          {transaction.type === 'sale' ? '+' : transaction.type === 'funding' ? '+' : '-'}฿{transaction.amount}
+                          {transaction.type === 'sale' ? '+' : transaction.type === 'funding' ? '+' : '-'}${transaction.amount}
                         </p>
                       </div>
                     </div>

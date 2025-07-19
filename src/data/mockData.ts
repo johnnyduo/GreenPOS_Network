@@ -31,7 +31,7 @@ export const mockShops: Shop[] = [
     lastSaleAt: Math.floor(Date.now() / 1000),
     inventory: [
       { id: 'inv_001', name: 'Organic Tomatoes', quantity: 25, price: 35, lowStockThreshold: 10, category: 'Vegetables', image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Fresh organic tomatoes grown without pesticides' },
-      { id: 'inv_002', name: 'Organic Rice', quantity: 8, price: 85, lowStockThreshold: 5, category: 'Grains', image: 'https://images.pexels.com/photos/33239/rice-grains-seeds-cereal.jpg?auto=compress&cs=tinysrgb&w=200', description: 'Premium organic jasmine rice' },
+      { id: 'inv_002', name: 'Organic Rice', quantity: 8, price: 85, lowStockThreshold: 5, category: 'Grains', image: 'https://orgboxthailand.com/wp-content/uploads/2020/04/wholegrainbrownrice-1.jpg', description: 'Premium organic jasmine rice' },
       { id: 'inv_003', name: 'Fresh Herbs Bundle', quantity: 15, price: 45, lowStockThreshold: 8, category: 'Herbs', image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg?auto=compress&cs=tinysrgb&w=200', description: 'Mixed fresh herbs including basil, cilantro, and mint' },
     ]
   },

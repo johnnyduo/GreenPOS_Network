@@ -68,7 +68,7 @@ export const LiveCameraCarousel: React.FC<LiveCameraCarouselProps> = ({ shop }) 
         </div>
       </div>
       
-      <div className="relative rounded-lg overflow-hidden h-32 mb-2">
+      <div className="relative rounded-lg overflow-hidden h-32 mb-2 bg-gray-200">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentCamera}
@@ -79,6 +79,10 @@ export const LiveCameraCarousel: React.FC<LiveCameraCarouselProps> = ({ shop }) 
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = 'https://images.pexels.com/photos/1267320/pexels-photo-1267320.jpeg?auto=compress&cs=tinysrgb&w=400';
+            }}
           />
         </AnimatePresence>
         
